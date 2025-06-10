@@ -67,8 +67,7 @@ struct ContentView: View {
 struct ARActivityView: View {
     @Binding var activeActivityId: String?
     @State private var currentIndex = 0
-    @State private var isSurfaceDetected = false // --- NEW --- State to track surface detection
-
+    
     let alphabetData = [
         AlphabetStep(letter: "A", word: "Apple", modelName: "Apple.usdz", color: .systemRed),
         AlphabetStep(letter: "B", word: "Ball", modelName: "Ball.usdz", color: .systemBlue),
@@ -100,59 +99,55 @@ struct ARActivityView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            ARViewContainer(currentIndex: $currentIndex, models: alphabetData, isSurfaceDetected: $isSurfaceDetected)
+            ARViewContainer(currentIndex: $currentIndex, models: alphabetData)
                 .edgesIgnoringSafeArea(.all)
             
-            // --- UPDATED --- Conditional UI based on surface detection
-            if isSurfaceDetected {
-                VStack {
-                    HStack {
-                        Text(alphabetData[currentIndex].letter)
-                            .font(.system(size: 60, weight: .bold, design: .rounded))
-                        Text("is for")
-                            .font(.title2)
-                        Text(alphabetData[currentIndex].word)
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                        Spacer()
+            VStack {
+                HStack {
+                    Text(alphabetData[currentIndex].letter)
+                        .font(.system(size: 60, weight: .bold, design: .rounded))
+                    Text("is for")
+                        .font(.title2)
+                    Text(alphabetData[currentIndex].word)
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                    Spacer()
+                }
+                .padding()
+                .background(.regularMaterial)
+                .cornerRadius(15)
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                HStack(spacing: 20) {
+                    Button(action: { if currentIndex > 0 { currentIndex -= 1 } }) {
+                        Image(systemName: "arrow.left")
                     }
+                    .font(.largeTitle)
                     .padding()
                     .background(.regularMaterial)
-                    .cornerRadius(15)
-                    .padding(.horizontal)
+                    .clipShape(Circle())
+                    .opacity(currentIndex > 0 ? 1 : 0.3)
+                    .disabled(currentIndex <= 0)
                     
-                    Spacer()
+                    Button("Finish") { activeActivityId = nil }
+                        .font(.headline)
+                        .padding()
+                        .background(.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(15)
                     
-                    HStack(spacing: 20) {
-                        Button(action: { if currentIndex > 0 { currentIndex -= 1 } }) {
-                            Image(systemName: "arrow.left")
-                        }
-                        .font(.largeTitle)
-                        .padding()
-                        .background(.regularMaterial)
-                        .clipShape(Circle())
-                        .opacity(currentIndex > 0 ? 1 : 0.3)
-                        .disabled(currentIndex <= 0)
-                        
-                        Button("Finish") { activeActivityId = nil }
-                            .font(.headline)
-                            .padding()
-                            .background(.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(15)
-                        
-                        Button(action: { if currentIndex < alphabetData.count - 1 { currentIndex += 1 } }) {
-                            Image(systemName: "arrow.right")
-                        }
-                        .font(.largeTitle)
-                        .padding()
-                        .background(.regularMaterial)
-                        .clipShape(Circle())
-                        .opacity(currentIndex < alphabetData.count - 1 ? 1 : 0.3)
-                        .disabled(currentIndex >= alphabetData.count - 1)
+                    Button(action: { if currentIndex < alphabetData.count - 1 { currentIndex += 1 } }) {
+                        Image(systemName: "arrow.right")
                     }
+                    .font(.largeTitle)
                     .padding()
+                    .background(.regularMaterial)
+                    .clipShape(Circle())
+                    .opacity(currentIndex < alphabetData.count - 1 ? 1 : 0.3)
+                    .disabled(currentIndex >= alphabetData.count - 1)
                 }
-                .transition(.opacity.animation(.easeInOut))
+                .padding()
             }
         }
     }
@@ -169,25 +164,17 @@ struct AlphabetStep {
 struct ARViewContainer: UIViewRepresentable {
     @Binding var currentIndex: Int
     let models: [AlphabetStep]
-    @Binding var isSurfaceDetected: Bool
 
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
         context.coordinator.arView = arView
         context.coordinator.models = models
-        context.coordinator.isSurfaceDetected = $isSurfaceDetected
-
+        
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = [.horizontal]
-        arView.session.run(config)
-
-        let coachingOverlay = ARCoachingOverlayView()
-        coachingOverlay.session = arView.session
-        coachingOverlay.goal = .horizontalPlane
-        coachingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        coachingOverlay.delegate = context.coordinator // --- NEW --- Set delegate
-        arView.addSubview(coachingOverlay)
+        arView.session.run(config, options: [.resetTracking, .removeExistingAnchors])
         
+        context.coordinator.showAlphabet(at: currentIndex)
         return arView
     }
 
@@ -199,22 +186,13 @@ struct ARViewContainer: UIViewRepresentable {
         Coordinator()
     }
 
-    class Coordinator: NSObject, ARCoachingOverlayViewDelegate {
+    class Coordinator: NSObject {
         weak var arView: ARView?
         var alphabetAnchor: AnchorEntity?
         var models: [AlphabetStep] = []
-        var isSurfaceDetected: Binding<Bool>?
-
-        // --- NEW --- Delegate method to trigger content placement
-        func coachingOverlayViewDidDeactivate(_ coachingOverlayView: ARCoachingOverlayView) {
-            isSurfaceDetected?.wrappedValue = true
-            showAlphabet(at: 0)
-        }
+        var modelLoadCancellable: AnyCancellable?
 
         func showAlphabet(at index: Int) {
-            // Only proceed if a surface has been detected
-            guard isSurfaceDetected?.wrappedValue == true else { return }
-
             if let existingAnchor = alphabetAnchor {
                 arView?.scene.removeAnchor(existingAnchor)
             }
@@ -223,49 +201,51 @@ struct ARViewContainer: UIViewRepresentable {
             
             let step = models[index]
             
-            let anchor = AnchorEntity(plane: .horizontal, minimumBounds: [0.2, 0.2])
+            // --- UPDATED --- Use a simpler, more reliable anchor
+            let anchor = AnchorEntity(plane: .horizontal)
             
-            // Generate the letter model
-            let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.25, weight: .bold)) // Increased size
+            // --- UPDATED --- Increased font size for better visibility
+            let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.15, weight: .bold))
             let letterMaterial = SimpleMaterial(color: step.color, roughness: 0.3, isMetallic: false)
             let letterEntity = ModelEntity(mesh: letterMesh, materials: [letterMaterial])
+
+            modelLoadCancellable = ModelEntity.loadModelAsync(named: step.modelName)
+                .receive(on: DispatchQueue.main)
+                .sink(receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        print("Error loading model \(step.modelName): \(error)")
+                    }
+                }, receiveValue: { [weak self] objectEntity in
+                    self?.configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor)
+                })
+        }
+        
+        func configureAndPlaceModels(letter: ModelEntity, object: ModelEntity, on anchor: AnchorEntity) {
+            // Configure both models
+            normalizeAndConfigure(object, targetSize: 0.15) // Object model size
+            normalizeAndConfigure(letter, targetSize: 0.1)  // Letter model size
+
+            let letterBounds = letter.visualBounds(relativeTo: nil)
+            let objectBounds = object.visualBounds(relativeTo: nil)
             
-            do {
-                let objectEntity = try self.loadAndConfigureModel(named: step.modelName)
-                
-                letterEntity.generateCollisionShapes(recursive: true)
-                arView?.installGestures([.all], for: letterEntity)
-                
-                let letterBounds = letterEntity.visualBounds(relativeTo: nil)
-                let objectBounds = objectEntity.visualBounds(relativeTo: nil)
-                
-                let gap: Float = 0.1
-                let letterWidth = letterBounds.extents.x
-                let objectWidth = objectBounds.extents.x
-                
-                letterEntity.position.x = -gap/2 - letterWidth/2
-                objectEntity.position.x = gap/2 + objectWidth/2
-                
-                letterEntity.position.y = -letterBounds.min.y
-                objectEntity.position.y = -objectBounds.min.y
-                
-                anchor.addChild(letterEntity)
-                anchor.addChild(objectEntity)
-                
-            } catch {
-                print("Error loading or configuring model \(step.modelName): \(error)")
-                let fallbackEntity = ModelEntity(mesh: .generateBox(size: 0.1), materials: [SimpleMaterial(color: .orange, isMetallic: false)])
-                anchor.addChild(fallbackEntity)
-            }
+            let gap: Float = 0.05
+            let letterWidth = letterBounds.extents.x
+            let objectWidth = objectBounds.extents.x
+            
+            letter.position.x = -gap/2 - letterWidth/2
+            object.position.x = gap/2 + objectWidth/2
+            
+            letter.position.y = -letterBounds.min.y
+            object.position.y = -objectBounds.min.y
+            
+            anchor.addChild(letter)
+            anchor.addChild(object)
             
             arView?.scene.addAnchor(anchor)
             self.alphabetAnchor = anchor
         }
-        
-        func loadAndConfigureModel(named modelName: String) throws -> ModelEntity {
-            let entity = try ModelEntity.loadModel(named: modelName)
-            
-            let targetSize: Float = 0.15 // Smaller, more realistic size
+
+        func normalizeAndConfigure(_ entity: ModelEntity, targetSize: Float) {
             let bounds = entity.visualBounds(relativeTo: nil)
             let maxDimension = max(bounds.extents.x, bounds.extents.y, bounds.extents.z)
             if maxDimension > 0 {
@@ -279,8 +259,6 @@ struct ARViewContainer: UIViewRepresentable {
             if let firstAnimation = entity.availableAnimations.first {
                 entity.playAnimation(firstAnimation.repeat())
             }
-            
-            return entity
         }
     }
 }
