@@ -68,33 +68,34 @@ struct ARActivityView: View {
     @Binding var activeActivityId: String?
     @State private var currentIndex = 0
     
+    // --- UPDATED with your new data ---
     let alphabetData = [
-        AlphabetStep(letter: "A", word: "Apple", modelName: "Apple.usdz", color: .systemRed),
-        AlphabetStep(letter: "B", word: "Ball", modelName: "Ball.usdz", color: .systemBlue),
-        AlphabetStep(letter: "C", word: "Cat", modelName: "Cat.usdz", color: .systemOrange),
-        AlphabetStep(letter: "D", word: "Dog", modelName: "Dog.usdz", color: .systemGreen),
-        AlphabetStep(letter: "E", word: "Elephant", modelName: "Elephant.usdz", color: .systemBlue),
-        AlphabetStep(letter: "F", word: "Fish", modelName: "Fish.usdz", color: .systemOrange),
-        AlphabetStep(letter: "G", word: "Goat", modelName: "Goat.usdz", color: .systemPurple),
-        AlphabetStep(letter: "H", word: "Horse", modelName: "Horse.usdz", color: .systemPink),
-        AlphabetStep(letter: "I", word: "Igloo", modelName: "Igloo.usdz", color: .systemIndigo),
-        AlphabetStep(letter: "J", word: "Jam", modelName: "Jam.usdz", color: .systemRed),
-        AlphabetStep(letter: "K", word: "Kite", modelName: "Kite.usdz", color: .systemBlue),
-        AlphabetStep(letter: "L", word: "Lion", modelName: "Lion.usdz", color: .systemOrange),
-        AlphabetStep(letter: "M", word: "Mouse", modelName: "Mouse.usdz", color: .systemGreen),
-        AlphabetStep(letter: "N", word: "Nest", modelName: "Nest.usdz", color: .systemYellow),
-        AlphabetStep(letter: "O", word: "Octopus", modelName: "Octopus.usdz", color: .systemTeal),
-        AlphabetStep(letter: "P", word: "Plane", modelName: "Plane.usdz", color: .systemPurple),
-        AlphabetStep(letter: "Q", word: "Quack", modelName: "Quack.usdz", color: .systemPink),
-        AlphabetStep(letter: "R", word: "Rabbit", modelName: "Rabbit.usdz", color: .systemIndigo),
-        AlphabetStep(letter: "S", word: "Sun", modelName: "Sun.usdz", color: .systemRed),
-        AlphabetStep(letter: "T", word: "Tree", modelName: "Tree.usdz", color: .systemBlue),
-        AlphabetStep(letter: "U", word: "Umbrella", modelName: "Umbrella.usdz", color: .systemOrange),
-        AlphabetStep(letter: "V", word: "Violin", modelName: "Violin.usdz", color: .systemGreen),
-        AlphabetStep(letter: "W", word: "Wolf", modelName: "Wolf.usdz", color: .systemYellow),
-        AlphabetStep(letter: "X", word: "Xylophone", modelName: "Xylophone.usdz", color: .systemTeal),
-        AlphabetStep(letter: "Y", word: "Yacht", modelName: "Yacht.usdz", color: .systemPurple),
-        AlphabetStep(letter: "Z", word: "Zebra", modelName: "Zebra.usdz", color: .systemPink)
+        AlphabetStep(letter: "A", word: "Apple", modelName: "Apple.usdz", color: .systemRed, targetSize: 0.002, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "B", word: "Ball", modelName: "Ball.usdz", color: .systemBlue, targetSize: 0.2, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "C", word: "Cat", modelName: "Cat.usdz", color: .systemOrange, targetSize: 0.0075, positionOffset: [0, 0, 0]),
+        AlphabetStep(letter: "D", word: "Dog", modelName: "Dog.usdz", color: .systemGreen, targetSize: 0.0095, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "E", word: "Elephant", modelName: "Elephant.usdz", color: .systemBlue, targetSize: 0.0085, positionOffset: [0, -0.25, 0]),
+        AlphabetStep(letter: "F", word: "Fish", modelName: "Fish.usdz", color: .systemOrange, targetSize: 0.0075, positionOffset: [0.1, 0.02, 0]),
+        AlphabetStep(letter: "G", word: "Guitar", modelName: "Guitar.usdz", color: .systemPurple, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "H", word: "Horse", modelName: "Horse.usdz", color: .systemPink, targetSize: 0.0075, positionOffset: [0.2, 0, 0]),
+        AlphabetStep(letter: "I", word: "Igloo", modelName: "Igloo.usdz", color: .systemIndigo, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "J", word: "Jam", modelName: "Jam.usdz", color: .systemRed, targetSize: 0.0035, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "K", word: "Kite", modelName: "Kite.usdz", color: .systemBlue, targetSize: 0.0075, positionOffset: [0, 0.02, 0]),
+        AlphabetStep(letter: "L", word: "Lion", modelName: "Lion.usdz", color: .systemOrange, targetSize: 0.0095, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "M", word: "Mouse", modelName: "Mouse.usdz", color: .systemGreen, targetSize: 0.0045, positionOffset: [0, 0, 0]),
+        AlphabetStep(letter: "N", word: "Nest", modelName: "Nest.usdz", color: .systemYellow, targetSize: 0.0035, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "O", word: "Octopus", modelName: "Octopus.usdz", color: .systemTeal, targetSize: 0.000075, positionOffset: [0.35, 0, 0]),
+        AlphabetStep(letter: "P", word: "Plane", modelName: "Plane.usdz", color: .systemPurple, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "Q", word: "Quack", modelName: "Quack.usdz", color: .systemPink, targetSize: 0.0045, positionOffset: [0.1, -0.1, 0]),
+        AlphabetStep(letter: "R", word: "Rabbit", modelName: "Rabbit.usdz", color: .systemIndigo, targetSize: 0.0040, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "S", word: "Slide", modelName: "Slide.usdz", color: .systemRed, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "T", word: "Tree", modelName: "Tree.usdz", color: .systemBlue, targetSize: 0.0095, positionOffset: [0.15, 0, 0]),
+        AlphabetStep(letter: "U", word: "Umbrella", modelName: "Umbrella.usdz", color: .systemOrange, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "V", word: "Violin", modelName: "Violin.usdz", color: .systemGreen, targetSize: 0.0075, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "W", word: "Wolf", modelName: "Wolf.usdz", color: .systemYellow, targetSize: 0.0099, positionOffset: [0.15, 0, -0.65]),
+        AlphabetStep(letter: "X", word: "Xylophone", modelName: "Xylophone.usdz", color: .systemTeal, targetSize: 0.0065, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "Y", word: "Yacht", modelName: "Yacht.usdz", color: .systemPurple, targetSize: 0.0095, positionOffset: [0.1, 0, 0]),
+        AlphabetStep(letter: "Z", word: "Zebra", modelName: "Zebra.usdz", color: .systemPink, targetSize: 0.0075, positionOffset: [0.1, 0, 0])
     ]
 
     var body: some View {
@@ -157,8 +158,10 @@ struct ARActivityView: View {
 struct AlphabetStep {
     let letter: String
     let word: String
-    let modelName: String // File name of the .usdz model
+    let modelName: String
     let color: UIColor
+    let targetSize: Float?
+    let positionOffset: SIMD3<Float>?
 }
 
 struct ARViewContainer: UIViewRepresentable {
@@ -201,11 +204,9 @@ struct ARViewContainer: UIViewRepresentable {
             
             let step = models[index]
             
-            // --- UPDATED --- Use a simpler, more reliable anchor
             let anchor = AnchorEntity(plane: .horizontal)
             
-            // --- UPDATED --- Increased font size for better visibility
-            let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.15, weight: .bold))
+            let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.25, weight: .bold))
             let letterMaterial = SimpleMaterial(color: step.color, roughness: 0.3, isMetallic: false)
             let letterEntity = ModelEntity(mesh: letterMesh, materials: [letterMaterial])
 
@@ -216,19 +217,20 @@ struct ARViewContainer: UIViewRepresentable {
                         print("Error loading model \(step.modelName): \(error)")
                     }
                 }, receiveValue: { [weak self] objectEntity in
-                    self?.configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor)
+                    self?.configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor, step: step)
                 })
         }
         
-        func configureAndPlaceModels(letter: ModelEntity, object: ModelEntity, on anchor: AnchorEntity) {
-            // Configure both models
-            normalizeAndConfigure(object, targetSize: 0.15) // Object model size
-            normalizeAndConfigure(letter, targetSize: 0.1)  // Letter model size
+        func configureAndPlaceModels(letter: ModelEntity, object: ModelEntity, on anchor: AnchorEntity, step: AlphabetStep) {
+            let objectSize = step.targetSize ?? 0.15
+            
+            normalizeAndConfigure(object, targetSize: objectSize)
+            normalizeAndConfigure(letter, targetSize: 0.2)
 
             let letterBounds = letter.visualBounds(relativeTo: nil)
             let objectBounds = object.visualBounds(relativeTo: nil)
             
-            let gap: Float = 0.05
+            let gap: Float = 0.1
             let letterWidth = letterBounds.extents.x
             let objectWidth = objectBounds.extents.x
             
@@ -237,6 +239,10 @@ struct ARViewContainer: UIViewRepresentable {
             
             letter.position.y = -letterBounds.min.y
             object.position.y = -objectBounds.min.y
+            
+            if let offset = step.positionOffset {
+                object.position += offset
+            }
             
             anchor.addChild(letter)
             anchor.addChild(object)
