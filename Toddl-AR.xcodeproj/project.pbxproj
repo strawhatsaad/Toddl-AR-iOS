@@ -1,0 +1,745 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		6729D7CA2DF7C7C300800159 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D7C92DF7C7C300800159 /* FirebaseAuth */; };
+		6729D7CC2DF7C7C300800159 /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D7CB2DF7C7C300800159 /* FirebaseAuthCombine-Community */; };
+		6729D7CE2DF7C7C300800159 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D7CD2DF7C7C300800159 /* FirebaseFirestore */; };
+		6729D7D02DF7C7C300800159 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D7CF2DF7C7C300800159 /* FirebaseFirestoreCombine-Community */; };
+		6729D7D22DF7C89100800159 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D7D12DF7C89100800159 /* FirebaseCore */; };
+		6729D7F92DF7F9C200800159 /* Cat.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E12DF7F9C200800159 /* Cat.usdz */; };
+		6729D7FA2DF7F9C200800159 /* Zebra.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F82DF7F9C200800159 /* Zebra.usdz */; };
+		6729D7FB2DF7F9C200800159 /* Elephant.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E42DF7F9C200800159 /* Elephant.usdz */; };
+		6729D7FC2DF7F9C200800159 /* Jam.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E82DF7F9C200800159 /* Jam.usdz */; };
+		6729D7FD2DF7F9C200800159 /* Umbrella.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F32DF7F9C200800159 /* Umbrella.usdz */; };
+		6729D7FE2DF7F9C200800159 /* Horse.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E62DF7F9C200800159 /* Horse.usdz */; };
+		6729D7FF2DF7F9C200800159 /* Sun.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F12DF7F9C200800159 /* Sun.usdz */; };
+		6729D8002DF7F9C200800159 /* Goat.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E52DF7F9C200800159 /* Goat.usdz */; };
+		6729D8012DF7F9C200800159 /* Igloo.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E72DF7F9C200800159 /* Igloo.usdz */; };
+		6729D8022DF7F9C200800159 /* Apple1.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7DE2DF7F9C200800159 /* Apple1.usdz */; };
+		6729D8032DF7F9C200800159 /* Kite.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E92DF7F9C200800159 /* Kite.usdz */; };
+		6729D8042DF7F9C200800159 /* Wolf.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F52DF7F9C200800159 /* Wolf.usdz */; };
+		6729D8052DF7F9C200800159 /* Quack.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7EF2DF7F9C200800159 /* Quack.usdz */; };
+		6729D8062DF7F9C200800159 /* Ball.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E02DF7F9C200800159 /* Ball.usdz */; };
+		6729D8072DF7F9C200800159 /* Plane.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7EE2DF7F9C200800159 /* Plane.usdz */; };
+		6729D8082DF7F9C200800159 /* Nest.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7EC2DF7F9C200800159 /* Nest.usdz */; };
+		6729D8092DF7F9C200800159 /* Rabbit.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F02DF7F9C200800159 /* Rabbit.usdz */; };
+		6729D80A2DF7F9C200800159 /* Apple.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7DD2DF7F9C200800159 /* Apple.usdz */; };
+		6729D80B2DF7F9C200800159 /* Violin.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F42DF7F9C200800159 /* Violin.usdz */; };
+		6729D80C2DF7F9C200800159 /* Mouse.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7EB2DF7F9C200800159 /* Mouse.usdz */; };
+		6729D80D2DF7F9C200800159 /* Xylophone.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F62DF7F9C200800159 /* Xylophone.usdz */; };
+		6729D80E2DF7F9C200800159 /* Lion.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7EA2DF7F9C200800159 /* Lion.usdz */; };
+		6729D80F2DF7F9C200800159 /* Tree.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F22DF7F9C200800159 /* Tree.usdz */; };
+		6729D8102DF7F9C200800159 /* Dog.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E32DF7F9C200800159 /* Dog.usdz */; };
+		6729D8112DF7F9C200800159 /* Yacht.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7F72DF7F9C200800159 /* Yacht.usdz */; };
+		6729D8122DF7F9C200800159 /* Apple2.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7DF2DF7F9C200800159 /* Apple2.usdz */; };
+		6729D8132DF7F9C200800159 /* Octopus.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7ED2DF7F9C200800159 /* Octopus.usdz */; };
+		6729D8142DF7F9C200800159 /* Cat1.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D7E22DF7F9C200800159 /* Cat1.usdz */; };
+		6729D8162DF808D400800159 /* Fish.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8152DF808D400800159 /* Fish.usdz */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6729D7A32DF7AE2C00800159 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6729D78D2DF7AE2A00800159 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6729D7942DF7AE2A00800159;
+			remoteInfo = "Toddl-AR";
+		};
+		6729D7AD2DF7AE2C00800159 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6729D78D2DF7AE2A00800159 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6729D7942DF7AE2A00800159;
+			remoteInfo = "Toddl-AR";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		6729D7952DF7AE2A00800159 /* Toddl-AR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Toddl-AR.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6729D7A22DF7AE2C00800159 /* Toddl-ARTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Toddl-ARTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6729D7AC2DF7AE2C00800159 /* Toddl-ARUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Toddl-ARUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6729D7DD2DF7F9C200800159 /* Apple.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Apple.usdz; sourceTree = "<group>"; };
+		6729D7DE2DF7F9C200800159 /* Apple1.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Apple1.usdz; sourceTree = "<group>"; };
+		6729D7DF2DF7F9C200800159 /* Apple2.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Apple2.usdz; sourceTree = "<group>"; };
+		6729D7E02DF7F9C200800159 /* Ball.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Ball.usdz; sourceTree = "<group>"; };
+		6729D7E12DF7F9C200800159 /* Cat.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Cat.usdz; sourceTree = "<group>"; };
+		6729D7E22DF7F9C200800159 /* Cat1.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Cat1.usdz; sourceTree = "<group>"; };
+		6729D7E32DF7F9C200800159 /* Dog.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Dog.usdz; sourceTree = "<group>"; };
+		6729D7E42DF7F9C200800159 /* Elephant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Elephant.usdz; sourceTree = "<group>"; };
+		6729D7E52DF7F9C200800159 /* Goat.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Goat.usdz; sourceTree = "<group>"; };
+		6729D7E62DF7F9C200800159 /* Horse.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Horse.usdz; sourceTree = "<group>"; };
+		6729D7E72DF7F9C200800159 /* Igloo.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Igloo.usdz; sourceTree = "<group>"; };
+		6729D7E82DF7F9C200800159 /* Jam.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Jam.usdz; sourceTree = "<group>"; };
+		6729D7E92DF7F9C200800159 /* Kite.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Kite.usdz; sourceTree = "<group>"; };
+		6729D7EA2DF7F9C200800159 /* Lion.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Lion.usdz; sourceTree = "<group>"; };
+		6729D7EB2DF7F9C200800159 /* Mouse.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Mouse.usdz; sourceTree = "<group>"; };
+		6729D7EC2DF7F9C200800159 /* Nest.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nest.usdz; sourceTree = "<group>"; };
+		6729D7ED2DF7F9C200800159 /* Octopus.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Octopus.usdz; sourceTree = "<group>"; };
+		6729D7EE2DF7F9C200800159 /* Plane.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Plane.usdz; sourceTree = "<group>"; };
+		6729D7EF2DF7F9C200800159 /* Quack.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Quack.usdz; sourceTree = "<group>"; };
+		6729D7F02DF7F9C200800159 /* Rabbit.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Rabbit.usdz; sourceTree = "<group>"; };
+		6729D7F12DF7F9C200800159 /* Sun.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Sun.usdz; sourceTree = "<group>"; };
+		6729D7F22DF7F9C200800159 /* Tree.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Tree.usdz; sourceTree = "<group>"; };
+		6729D7F32DF7F9C200800159 /* Umbrella.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Umbrella.usdz; sourceTree = "<group>"; };
+		6729D7F42DF7F9C200800159 /* Violin.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Violin.usdz; sourceTree = "<group>"; };
+		6729D7F52DF7F9C200800159 /* Wolf.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Wolf.usdz; sourceTree = "<group>"; };
+		6729D7F62DF7F9C200800159 /* Xylophone.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Xylophone.usdz; sourceTree = "<group>"; };
+		6729D7F72DF7F9C200800159 /* Yacht.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Yacht.usdz; sourceTree = "<group>"; };
+		6729D7F82DF7F9C200800159 /* Zebra.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Zebra.usdz; sourceTree = "<group>"; };
+		6729D8152DF808D400800159 /* Fish.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fish.usdz; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		6729D7972DF7AE2A00800159 /* Toddl-AR */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Toddl-AR";
+			sourceTree = "<group>";
+		};
+		6729D7A52DF7AE2C00800159 /* Toddl-ARTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Toddl-ARTests";
+			sourceTree = "<group>";
+		};
+		6729D7AF2DF7AE2C00800159 /* Toddl-ARUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Toddl-ARUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6729D7922DF7AE2A00800159 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6729D7CA2DF7C7C300800159 /* FirebaseAuth in Frameworks */,
+				6729D7D22DF7C89100800159 /* FirebaseCore in Frameworks */,
+				6729D7D02DF7C7C300800159 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				6729D7CC2DF7C7C300800159 /* FirebaseAuthCombine-Community in Frameworks */,
+				6729D7CE2DF7C7C300800159 /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D79F2DF7AE2C00800159 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D7A92DF7AE2C00800159 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6729D78C2DF7AE2A00800159 = {
+			isa = PBXGroup;
+			children = (
+				6729D7D42DF7E35700800159 /* Models */,
+				6729D7972DF7AE2A00800159 /* Toddl-AR */,
+				6729D7A52DF7AE2C00800159 /* Toddl-ARTests */,
+				6729D7AF2DF7AE2C00800159 /* Toddl-ARUITests */,
+				6729D7962DF7AE2A00800159 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6729D7962DF7AE2A00800159 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6729D7952DF7AE2A00800159 /* Toddl-AR.app */,
+				6729D7A22DF7AE2C00800159 /* Toddl-ARTests.xctest */,
+				6729D7AC2DF7AE2C00800159 /* Toddl-ARUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6729D7D42DF7E35700800159 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				6729D7DD2DF7F9C200800159 /* Apple.usdz */,
+				6729D7DE2DF7F9C200800159 /* Apple1.usdz */,
+				6729D7DF2DF7F9C200800159 /* Apple2.usdz */,
+				6729D7E02DF7F9C200800159 /* Ball.usdz */,
+				6729D7E12DF7F9C200800159 /* Cat.usdz */,
+				6729D7E22DF7F9C200800159 /* Cat1.usdz */,
+				6729D7E32DF7F9C200800159 /* Dog.usdz */,
+				6729D7E42DF7F9C200800159 /* Elephant.usdz */,
+				6729D7E52DF7F9C200800159 /* Goat.usdz */,
+				6729D7E62DF7F9C200800159 /* Horse.usdz */,
+				6729D7E72DF7F9C200800159 /* Igloo.usdz */,
+				6729D7E82DF7F9C200800159 /* Jam.usdz */,
+				6729D7E92DF7F9C200800159 /* Kite.usdz */,
+				6729D7EA2DF7F9C200800159 /* Lion.usdz */,
+				6729D8152DF808D400800159 /* Fish.usdz */,
+				6729D7EB2DF7F9C200800159 /* Mouse.usdz */,
+				6729D7EC2DF7F9C200800159 /* Nest.usdz */,
+				6729D7ED2DF7F9C200800159 /* Octopus.usdz */,
+				6729D7EE2DF7F9C200800159 /* Plane.usdz */,
+				6729D7EF2DF7F9C200800159 /* Quack.usdz */,
+				6729D7F02DF7F9C200800159 /* Rabbit.usdz */,
+				6729D7F12DF7F9C200800159 /* Sun.usdz */,
+				6729D7F22DF7F9C200800159 /* Tree.usdz */,
+				6729D7F32DF7F9C200800159 /* Umbrella.usdz */,
+				6729D7F42DF7F9C200800159 /* Violin.usdz */,
+				6729D7F52DF7F9C200800159 /* Wolf.usdz */,
+				6729D7F62DF7F9C200800159 /* Xylophone.usdz */,
+				6729D7F72DF7F9C200800159 /* Yacht.usdz */,
+				6729D7F82DF7F9C200800159 /* Zebra.usdz */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6729D7942DF7AE2A00800159 /* Toddl-AR */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6729D7B62DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-AR" */;
+			buildPhases = (
+				6729D7912DF7AE2A00800159 /* Sources */,
+				6729D7922DF7AE2A00800159 /* Frameworks */,
+				6729D7932DF7AE2A00800159 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6729D7972DF7AE2A00800159 /* Toddl-AR */,
+			);
+			name = "Toddl-AR";
+			packageProductDependencies = (
+				6729D7C92DF7C7C300800159 /* FirebaseAuth */,
+				6729D7CB2DF7C7C300800159 /* FirebaseAuthCombine-Community */,
+				6729D7CD2DF7C7C300800159 /* FirebaseFirestore */,
+				6729D7CF2DF7C7C300800159 /* FirebaseFirestoreCombine-Community */,
+				6729D7D12DF7C89100800159 /* FirebaseCore */,
+			);
+			productName = "Toddl-AR";
+			productReference = 6729D7952DF7AE2A00800159 /* Toddl-AR.app */;
+			productType = "com.apple.product-type.application";
+		};
+		6729D7A12DF7AE2C00800159 /* Toddl-ARTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6729D7B92DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-ARTests" */;
+			buildPhases = (
+				6729D79E2DF7AE2C00800159 /* Sources */,
+				6729D79F2DF7AE2C00800159 /* Frameworks */,
+				6729D7A02DF7AE2C00800159 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6729D7A42DF7AE2C00800159 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6729D7A52DF7AE2C00800159 /* Toddl-ARTests */,
+			);
+			name = "Toddl-ARTests";
+			packageProductDependencies = (
+			);
+			productName = "Toddl-ARTests";
+			productReference = 6729D7A22DF7AE2C00800159 /* Toddl-ARTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		6729D7AB2DF7AE2C00800159 /* Toddl-ARUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6729D7BC2DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-ARUITests" */;
+			buildPhases = (
+				6729D7A82DF7AE2C00800159 /* Sources */,
+				6729D7A92DF7AE2C00800159 /* Frameworks */,
+				6729D7AA2DF7AE2C00800159 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6729D7AE2DF7AE2C00800159 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				6729D7AF2DF7AE2C00800159 /* Toddl-ARUITests */,
+			);
+			name = "Toddl-ARUITests";
+			packageProductDependencies = (
+			);
+			productName = "Toddl-ARUITests";
+			productReference = 6729D7AC2DF7AE2C00800159 /* Toddl-ARUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6729D78D2DF7AE2A00800159 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					6729D7942DF7AE2A00800159 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					6729D7A12DF7AE2C00800159 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 6729D7942DF7AE2A00800159;
+					};
+					6729D7AB2DF7AE2C00800159 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 6729D7942DF7AE2A00800159;
+					};
+				};
+			};
+			buildConfigurationList = 6729D7902DF7AE2A00800159 /* Build configuration list for PBXProject "Toddl-AR" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 6729D78C2DF7AE2A00800159;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6729D7962DF7AE2A00800159 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6729D7942DF7AE2A00800159 /* Toddl-AR */,
+				6729D7A12DF7AE2C00800159 /* Toddl-ARTests */,
+				6729D7AB2DF7AE2C00800159 /* Toddl-ARUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6729D7932DF7AE2A00800159 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6729D7F92DF7F9C200800159 /* Cat.usdz in Resources */,
+				6729D7FA2DF7F9C200800159 /* Zebra.usdz in Resources */,
+				6729D7FB2DF7F9C200800159 /* Elephant.usdz in Resources */,
+				6729D7FC2DF7F9C200800159 /* Jam.usdz in Resources */,
+				6729D7FD2DF7F9C200800159 /* Umbrella.usdz in Resources */,
+				6729D7FE2DF7F9C200800159 /* Horse.usdz in Resources */,
+				6729D7FF2DF7F9C200800159 /* Sun.usdz in Resources */,
+				6729D8002DF7F9C200800159 /* Goat.usdz in Resources */,
+				6729D8012DF7F9C200800159 /* Igloo.usdz in Resources */,
+				6729D8022DF7F9C200800159 /* Apple1.usdz in Resources */,
+				6729D8032DF7F9C200800159 /* Kite.usdz in Resources */,
+				6729D8162DF808D400800159 /* Fish.usdz in Resources */,
+				6729D8042DF7F9C200800159 /* Wolf.usdz in Resources */,
+				6729D8052DF7F9C200800159 /* Quack.usdz in Resources */,
+				6729D8062DF7F9C200800159 /* Ball.usdz in Resources */,
+				6729D8072DF7F9C200800159 /* Plane.usdz in Resources */,
+				6729D8082DF7F9C200800159 /* Nest.usdz in Resources */,
+				6729D8092DF7F9C200800159 /* Rabbit.usdz in Resources */,
+				6729D80A2DF7F9C200800159 /* Apple.usdz in Resources */,
+				6729D80B2DF7F9C200800159 /* Violin.usdz in Resources */,
+				6729D80C2DF7F9C200800159 /* Mouse.usdz in Resources */,
+				6729D80D2DF7F9C200800159 /* Xylophone.usdz in Resources */,
+				6729D80E2DF7F9C200800159 /* Lion.usdz in Resources */,
+				6729D80F2DF7F9C200800159 /* Tree.usdz in Resources */,
+				6729D8102DF7F9C200800159 /* Dog.usdz in Resources */,
+				6729D8112DF7F9C200800159 /* Yacht.usdz in Resources */,
+				6729D8122DF7F9C200800159 /* Apple2.usdz in Resources */,
+				6729D8132DF7F9C200800159 /* Octopus.usdz in Resources */,
+				6729D8142DF7F9C200800159 /* Cat1.usdz in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D7A02DF7AE2C00800159 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D7AA2DF7AE2C00800159 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6729D7912DF7AE2A00800159 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D79E2DF7AE2C00800159 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6729D7A82DF7AE2C00800159 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6729D7A42DF7AE2C00800159 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6729D7942DF7AE2A00800159 /* Toddl-AR */;
+			targetProxy = 6729D7A32DF7AE2C00800159 /* PBXContainerItemProxy */;
+		};
+		6729D7AE2DF7AE2C00800159 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6729D7942DF7AE2A00800159 /* Toddl-AR */;
+			targetProxy = 6729D7AD2DF7AE2C00800159 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		6729D7B42DF7AE2C00800159 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6729D7B52DF7AE2C00800159 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6729D7B72DF7AE2C00800159 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B3FHT8VVXU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-AR";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6729D7B82DF7AE2C00800159 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B3FHT8VVXU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-AR";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6729D7BA2DF7AE2C00800159 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-ARTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Toddl-AR.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Toddl-AR";
+			};
+			name = Debug;
+		};
+		6729D7BB2DF7AE2C00800159 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-ARTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Toddl-AR.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Toddl-AR";
+			};
+			name = Release;
+		};
+		6729D7BD2DF7AE2C00800159 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-ARUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Toddl-AR";
+			};
+			name = Debug;
+		};
+		6729D7BE2DF7AE2C00800159 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ucp.Toddl-ARUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Toddl-AR";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6729D7902DF7AE2A00800159 /* Build configuration list for PBXProject "Toddl-AR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6729D7B42DF7AE2C00800159 /* Debug */,
+				6729D7B52DF7AE2C00800159 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6729D7B62DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-AR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6729D7B72DF7AE2C00800159 /* Debug */,
+				6729D7B82DF7AE2C00800159 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6729D7B92DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-ARTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6729D7BA2DF7AE2C00800159 /* Debug */,
+				6729D7BB2DF7AE2C00800159 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6729D7BC2DF7AE2C00800159 /* Build configuration list for PBXNativeTarget "Toddl-ARUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6729D7BD2DF7AE2C00800159 /* Debug */,
+				6729D7BE2DF7AE2C00800159 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.14.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6729D7C92DF7C7C300800159 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		6729D7CB2DF7C7C300800159 /* FirebaseAuthCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAuthCombine-Community";
+		};
+		6729D7CD2DF7C7C300800159 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		6729D7CF2DF7C7C300800159 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+		6729D7D12DF7C89100800159 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 6729D78D2DF7AE2A00800159 /* Project object */;
+}
