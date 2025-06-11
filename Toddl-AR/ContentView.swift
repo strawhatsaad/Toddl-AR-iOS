@@ -3,7 +3,6 @@ import RealityKit
 import Combine
 import ARKit
 
-// --- NEW --- Helper to allow dismissing the keyboard
 #if canImport(UIKit)
 extension View {
     func hideKeyboard() {
@@ -18,7 +17,6 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // The main view determined by the app's state
             Group {
                 switch viewModel.appState {
                 case .splash:
@@ -38,14 +36,10 @@ struct ContentView: View {
             .environmentObject(viewModel)
             .animation(.easeInOut, value: viewModel.appState)
             
-            // --- Overlays for Loading and Messages ---
-            
-            // Loading View Overlay
             if viewModel.isLoading {
                 LoadingView()
             }
             
-            // Custom Message View Overlay
             if viewModel.showMessage {
                 MessageView(
                     title: viewModel.messageTitle,
@@ -63,12 +57,255 @@ struct ContentView: View {
     }
 }
 
-// AR Activity View
+// --- NEW --- Numbers in AR Activity
+struct NumbersARView: View {
+    @Binding var activeActivityId: ActivityID?
+    @State private var challenges: [NumberChallenge] = []
+    @State private var currentIndex = 0
+    @State private var isSolved = false
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            NumbersARViewContainer(challenge: challenges.isEmpty ? nil : challenges[currentIndex], isSolved: $isSolved)
+                .edgesIgnoringSafeArea(.all)
+
+            if !challenges.isEmpty {
+                VStack {
+                    HStack {
+                        Text(challenges[currentIndex].question)
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                        Spacer()
+                    }
+                    .padding()
+                    .background(.regularMaterial)
+                    .cornerRadius(15)
+                    .padding(.horizontal)
+
+                    Spacer()
+
+                    HStack(spacing: 20) {
+                        Button("Finish") {
+                            activeActivityId = nil
+                        }
+                        .font(.headline)
+                        .padding()
+                        .background(Color.red.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(15)
+
+                        Button(action: {
+                            if currentIndex < challenges.count - 1 {
+                                currentIndex += 1
+                                isSolved = false
+                            } else {
+                                activeActivityId = nil
+                            }
+                        }) {
+                            HStack {
+                                Text(currentIndex < challenges.count - 1 ? "Next" : "Done!")
+                                Image(systemName: "arrow.right")
+                            }
+                        }
+                        .font(.headline)
+                        .padding()
+                        .background(isSolved ? Color.green.opacity(0.9) : Color.gray.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(15)
+                        .disabled(!isSolved)
+                    }
+                    .padding()
+                }
+            }
+        }
+        .onAppear(perform: generateChallenges)
+    }
+    
+    func generateChallenges() {
+        var newChallenges: [NumberChallenge] = []
+        for _ in 0..<5 {
+            let isAddition = Bool.random()
+            if isAddition {
+                let a = Int.random(in: 1...3)
+                let b = Int.random(in: 1...2)
+                newChallenges.append(NumberChallenge(type: .addition, question: "\(a) + \(b) = ?", initialCount: a, answer: a + b))
+            } else {
+                let a = Int.random(in: 3...5)
+                let b = Int.random(in: 1..<a)
+                newChallenges.append(NumberChallenge(type: .subtraction, question: "\(a) - \(b) = ?", initialCount: a, answer: a - b))
+            }
+        }
+        self.challenges = newChallenges
+    }
+}
+
+struct NumberChallenge {
+    enum ChallengeType { case addition, subtraction }
+    let type: ChallengeType
+    let question: String
+    let initialCount: Int
+    let answer: Int
+}
+
+struct NumbersARViewContainer: UIViewRepresentable {
+    var challenge: NumberChallenge?
+    @Binding var isSolved: Bool
+    //    var key: Int
+    
+    func makeUIView(context: Context) -> ARView {
+        // --- ADD THIS LINE ---
+        print("AR VIEW IS RESETTING: makeUIView has been called.")
+        // -----------------------
+        
+        let arView = ARView(frame: .zero)
+        context.coordinator.arView = arView
+        let config = ARWorldTrackingConfiguration()
+        config.planeDetection = [.horizontal]
+        arView.session.run(config)
+        return arView
+    }
+    
+    func updateUIView(_ uiView: ARView, context: Context) {
+        context.coordinator.isSolved = $isSolved
+        context.coordinator.updateChallenge(challenge)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    // Replace the entire Coordinator class with this updated version
+    
+    class Coordinator: NSObject {
+        weak var arView: ARView?
+        var challengeAnchor: AnchorEntity?
+        var isSolved: Binding<Bool>?
+        private var currentChallenge: NumberChallenge?
+        
+        // --- NEW PROPERTIES ---
+        private var previousCountInZone: Int = -1
+        private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
+        
+        // --- UPDATED: updateChallenge now only sets up the scene once ---
+        func updateChallenge(_ newChallenge: NumberChallenge?) {
+            // Check if the new challenge is actually different from the current one.
+            // This is the key to preventing the reset on completion. If the challenge is the same, we do nothing.
+            if newChallenge?.question == self.currentChallenge?.question {
+                return
+            }
+
+            // --- If it's a NEW challenge, we proceed with the reset ---
+
+            self.currentChallenge = newChallenge
+            self.previousCountInZone = -1 // Reset the haptic counter
+
+            challengeAnchor?.removeFromParent()
+            guard let challenge = newChallenge else { return }
+
+            // Create a new anchor for a fresh scene
+            let anchor = AnchorEntity(plane: .horizontal)
+
+            let zoneMesh = MeshResource.generatePlane(width: 0.5, depth: 0.5)
+            // The material is created fresh and blue every time
+            let zoneMaterial = UnlitMaterial(color: .blue.withAlphaComponent(0.1))
+            let zoneEntity = ModelEntity(mesh: zoneMesh, materials: [zoneMaterial])
+            zoneEntity.name = "targetZone"
+            anchor.addChild(zoneEntity)
+
+            // Lay out the initial cubes for the new challenge
+            for _ in 0..<challenge.initialCount {
+                anchor.addChild(createCube(inZone: true))
+            }
+
+            // Lay out the cubes outside the zone
+            for _ in 0..<6 {
+                anchor.addChild(createCube(inZone: false))
+            }
+
+            arView?.scene.addAnchor(anchor)
+            self.challengeAnchor = anchor
+            recalculateAndCheckSolution()
+        }
+        
+        func createCube(inZone: Bool) -> ModelEntity {
+            let cubeMesh = MeshResource.generateBox(size: 0.05, cornerRadius: 0.01)
+            let cubeMaterial = SimpleMaterial(color: .systemOrange, roughness: 0.3, isMetallic: false)
+            let cube = ModelEntity(mesh: cubeMesh, materials: [cubeMaterial])
+            cube.position = randomPosition(inZone: inZone)
+            cube.generateCollisionShapes(recursive: true)
+            arView?.installGestures([.translation], for: cube).forEach { gesture in
+                gesture.addTarget(self, action: #selector(handleDrag))
+            }
+            return cube
+        }
+        
+        func randomPosition(inZone: Bool) -> SIMD3<Float> {
+            let yPos: Float = 0.025
+            if inZone {
+                return [Float.random(in: -0.2...0.2), yPos, Float.random(in: -0.2...0.2)]
+            } else {
+                let xPos = Float.random(in: -0.5...0.5)
+                let zPos = Float.random(in: 0.3...0.5)
+                return [xPos, yPos, zPos]
+            }
+        }
+        
+        @objc func handleDrag(_ gesture: EntityTranslationGestureRecognizer) {
+            if gesture.state == .ended {
+                recalculateAndCheckSolution()
+            }
+        }
+        
+        // --- UPDATED: recalculateAndCheckSolution now has haptics ---
+        func recalculateAndCheckSolution() {
+            guard let anchor = challengeAnchor, let challenge = currentChallenge else { return }
+            
+            var countInZone = 0
+            for entity in anchor.children where entity.name != "targetZone" {
+                let position = entity.position(relativeTo: anchor)
+                if abs(position.x) <= 0.25 && abs(position.z) <= 0.25 {
+                    countInZone += 1
+                }
+            }
+            
+            if countInZone != self.previousCountInZone {
+                self.hapticGenerator.prepare()
+                self.hapticGenerator.impactOccurred()
+                self.previousCountInZone = countInZone
+            }
+            
+            if countInZone == challenge.answer {
+                // Only trigger "solved" state and animation if the challenge wasn't already marked as solved.
+                // This prevents the green zone from getting stuck.
+                if isSolved?.wrappedValue == false {
+                    isSolved?.wrappedValue = true
+                    playSuccessAnimation()
+                }
+            } else {
+                // If the user moves a cube out of the correct solution, mark it as unsolved again.
+                isSolved?.wrappedValue = false
+            }
+        }
+        
+        func playSuccessAnimation() {
+            guard let zone = challengeAnchor?.findEntity(named: "targetZone") as? ModelEntity else { return }
+            
+            // Create the green success material
+            var successMaterial = UnlitMaterial(color: .green)
+            successMaterial.blending = .transparent(opacity: 0.5)
+            
+            // Set the zone's material to green, and that's it!
+            zone.model?.materials = [successMaterial]
+            
+            // The part that changed the color back has been removed.
+        }
+    }
+}
+
+// AR Activity View for Alphabets
 struct ARActivityView: View {
-    @Binding var activeActivityId: String?
+    @Binding var activeActivityId: ActivityID?
     @State private var currentIndex = 0
     
-    // --- UPDATED with your new data ---
     let alphabetData = [
         AlphabetStep(letter: "A", word: "Apple", modelName: "Apple.usdz", color: .systemRed, targetSize: 0.002, positionOffset: [0.1, 0, 0]),
         AlphabetStep(letter: "B", word: "Ball", modelName: "Ball.usdz", color: .systemBlue, targetSize: 0.2, positionOffset: [0.1, 0, 0]),
@@ -177,12 +414,16 @@ struct ARViewContainer: UIViewRepresentable {
         config.planeDetection = [.horizontal]
         arView.session.run(config, options: [.resetTracking, .removeExistingAnchors])
         
-        context.coordinator.showAlphabet(at: currentIndex)
+        Task {
+            await context.coordinator.showAlphabet(at: currentIndex)
+        }
         return arView
     }
 
     func updateUIView(_ uiView: ARView, context: Context) {
-        context.coordinator.showAlphabet(at: currentIndex)
+        Task {
+            await context.coordinator.showAlphabet(at: currentIndex)
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -193,34 +434,43 @@ struct ARViewContainer: UIViewRepresentable {
         weak var arView: ARView?
         var alphabetAnchor: AnchorEntity?
         var models: [AlphabetStep] = []
-        var modelLoadCancellable: AnyCancellable?
 
-        func showAlphabet(at index: Int) {
-            if let existingAnchor = alphabetAnchor {
-                arView?.scene.removeAnchor(existingAnchor)
+        @MainActor
+        func showAlphabet(at index: Int) async {
+            // If we have a persistent anchor, remove all the old models from it.
+            if let anchor = self.alphabetAnchor {
+                anchor.children.removeAll()
+            } else {
+                // If this is the first run, create our persistent anchor and add it to the scene.
+                let newAnchor = AnchorEntity(plane: .horizontal)
+                arView?.scene.addAnchor(newAnchor)
+                self.alphabetAnchor = newAnchor
             }
-            
+
+            // We can now be sure we have a clean anchor to work with.
+            guard let anchor = self.alphabetAnchor else { return }
             guard index < models.count else { return }
-            
+
             let step = models[index]
-            
-            let anchor = AnchorEntity(plane: .horizontal)
             
             let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.25, weight: .bold))
             let letterMaterial = SimpleMaterial(color: step.color, roughness: 0.3, isMetallic: false)
             let letterEntity = ModelEntity(mesh: letterMesh, materials: [letterMaterial])
 
-            modelLoadCancellable = ModelEntity.loadModelAsync(named: step.modelName)
-                .receive(on: DispatchQueue.main)
-                .sink(receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        print("Error loading model \(step.modelName): \(error)")
-                    }
-                }, receiveValue: { [weak self] objectEntity in
-                    self?.configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor, step: step)
-                })
+            do {
+                let objectEntity = try await ModelEntity(named: step.modelName)
+                
+                // This helper function will now add the new models to our persistent anchor
+                configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor, step: step)
+                
+            } catch {
+                print("Error loading model \(step.modelName): \(error)")
+                let fallbackEntity = ModelEntity(mesh: .generateBox(size: 0.1), materials: [SimpleMaterial(color: .orange, isMetallic: false)])
+                anchor.addChild(fallbackEntity)
+            }
         }
         
+        @MainActor
         func configureAndPlaceModels(letter: ModelEntity, object: ModelEntity, on anchor: AnchorEntity, step: AlphabetStep) {
             let objectSize = step.targetSize ?? 0.15
             
@@ -246,9 +496,6 @@ struct ARViewContainer: UIViewRepresentable {
             
             anchor.addChild(letter)
             anchor.addChild(object)
-            
-            arView?.scene.addAnchor(anchor)
-            self.alphabetAnchor = anchor
         }
 
         func normalizeAndConfigure(_ entity: ModelEntity, targetSize: Float) {
@@ -499,7 +746,7 @@ struct MainHubView: View {
     @State private var selectedTab: Tab = .activity
     @Namespace private var animation
     
-    @State private var activeActivityId: String? = nil
+    @State private var activeActivityId: ActivityID? = nil
     
     enum Tab {
         case activity, profile, settings
@@ -531,21 +778,25 @@ struct MainHubView: View {
             .padding(.horizontal)
         }
         .edgesIgnoringSafeArea(.bottom)
-        .fullScreenCover(item: $activeActivityId) { id in
-            ARActivityView(activeActivityId: $activeActivityId)
+        .fullScreenCover(item: $activeActivityId) { activity in
+            if activity.id == "alphabets-in-ar" {
+                 ARActivityView(activeActivityId: $activeActivityId)
+            } else if activity.id == "numbers-in-ar" {
+                 NumbersARView(activeActivityId: $activeActivityId)
+            }
         }
     }
 }
 
 // Allows using a String? for the .fullScreenCover item
-extension String: Identifiable {
-    public var id: String { self }
+struct ActivityID: Identifiable {
+    let id: String
 }
 
 // Activities View (Home Screen)
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-    @Binding var activeActivityId: String?
+    @Binding var activeActivityId: ActivityID?
 
     @State private var searchText = ""
     @State private var selectedCategory = "All"
@@ -554,6 +805,7 @@ struct ActivitiesView: View {
     
     let activities = [
         ("alphabets-in-ar", "Alphabets in AR"),
+        ("numbers-in-ar", "Numbers in AR"),
         ("animals-in-ar", "Animals in AR"),
     ]
 
@@ -589,7 +841,7 @@ struct ActivitiesView: View {
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(activities, id: \.0) { activityId, activityName in
                             Button(action: {
-                                self.activeActivityId = activityId
+                                self.activeActivityId = ActivityID(id: activityId)
                             }) {
                                 VStack {
                                     Image(activityId)
