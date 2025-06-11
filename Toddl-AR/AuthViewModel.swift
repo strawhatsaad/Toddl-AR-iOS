@@ -9,6 +9,7 @@ import SwiftUI
 import Firebase
 import FirebaseFirestore // Import this for Firestore Codable support
 import FirebaseAuth
+import Combine
 
 // The AppState enum is now defined here, so it's accessible within the ViewModel.
 enum AppState {
@@ -35,6 +36,24 @@ struct ActivityRecord: Identifiable, Codable, Equatable {
     let activityName: String
     let dateCompleted: Date
     let durationInSeconds: Int
+}
+
+struct AggregatedActivityRecord: Identifiable, Hashable {
+    let id: String // Use activityId as the ID
+    let name: String
+    var totalDuration: Int
+}
+
+enum ActivityFilter: Hashable, Identifiable {
+    case allTime
+    case date(Date)
+    
+    var id: String {
+        switch self {
+        case .allTime: return "allTime"
+        case .date(let date): return date.ISO8601Format()
+        }
+    }
 }
 
 // A Codable struct for the User's data
@@ -254,6 +273,68 @@ class AuthViewModel: ObservableObject {
             self.activityHistory = snapshot.documents.compactMap { try? $0.data(as: ActivityRecord.self) }
         } catch {
             print("Error fetching activity history: \(error.localizedDescription)")
+        }
+    }
+}
+
+@MainActor
+class RecentActivitiesViewModel: ObservableObject {
+    @Published var selectedFilter: ActivityFilter = .allTime {
+        didSet { processRecords() }
+    }
+    @Published var aggregatedRecords = [AggregatedActivityRecord]()
+    
+    @Published var dateFilters: [ActivityFilter] = []
+    
+    // --- REMOVE 'private' from these two lines ---
+        var allRecords: [ActivityRecord] = []
+        var cancellables = Set<AnyCancellable>()
+        // ---------------------------------------------
+
+    init(historyPublisher: Published<[ActivityRecord]>.Publisher) {
+        // This ViewModel will automatically update when the activity history changes
+        historyPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] history in
+                guard let self = self else { return }
+                self.allRecords = history
+                self.generateDateFilters()
+                self.processRecords()
+            }
+            .store(in: &cancellables)
+    }
+    
+    func selectFilter(_ filter: ActivityFilter) {
+        self.selectedFilter = filter
+    }
+    
+    public func generateDateFilters() {
+        var filters: [ActivityFilter] = [.allTime]
+        // Get unique dates from the records, limited to the last 7 unique days
+        let uniqueDates = Set(allRecords.map { Calendar.current.startOfDay(for: $0.dateCompleted) })
+        let recentUniqueDates = Array(uniqueDates).sorted(by: >).prefix(7)
+        filters.append(contentsOf: recentUniqueDates.map { .date($0) })
+        self.dateFilters = filters
+    }
+    
+    public func processRecords() {
+        var recordsToProcess: [ActivityRecord]
+        
+        // 1. Filter records by date if necessary
+        switch selectedFilter {
+        case .allTime:
+            recordsToProcess = allRecords
+        case .date(let date):
+            recordsToProcess = allRecords.filter { Calendar.current.isDate($0.dateCompleted, inSameDayAs: date) }
+        }
+        
+        // 2. Aggregate the filtered records
+        let dictionary = Dictionary(grouping: recordsToProcess, by: { $0.activityId })
+        
+        self.aggregatedRecords = dictionary.values.compactMap { recordsInGroup -> AggregatedActivityRecord? in
+            guard let firstRecord = recordsInGroup.first else { return nil }
+            let totalDuration = recordsInGroup.reduce(0) { $0 + $1.durationInSeconds }
+            return AggregatedActivityRecord(id: firstRecord.activityId, name: firstRecord.activityName, totalDuration: totalDuration)
         }
     }
 }

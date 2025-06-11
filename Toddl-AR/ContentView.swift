@@ -58,17 +58,23 @@ struct ContentView: View {
 }
 
 // --- NEW --- Numbers in AR Activity
+// In Toddl-AR/ContentView.swift
+
+// --- REPLACE the entire NumbersARView struct with this one ---
 struct NumbersARView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @State private var startTime = Date()
+    
     @Binding var activeActivityId: ActivityID?
     @State private var challenges: [NumberChallenge] = []
     @State private var currentIndex = 0
     @State private var isSolved = false
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
             NumbersARViewContainer(challenge: challenges.isEmpty ? nil : challenges[currentIndex], isSolved: $isSolved)
                 .edgesIgnoringSafeArea(.all)
-            
+
             if !challenges.isEmpty {
                 VStack {
                     HStack {
@@ -80,25 +86,28 @@ struct NumbersARView: View {
                     .background(.regularMaterial)
                     .cornerRadius(15)
                     .padding(.horizontal)
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 20) {
+                        // Updated "Finish" button
                         Button("Finish") {
-                            activeActivityId = nil
+                            finishActivity()
                         }
                         .font(.headline)
                         .padding()
                         .background(Color.red.opacity(0.8))
                         .foregroundColor(.white)
                         .cornerRadius(15)
-                        
+
+                        // Updated "Next/Done!" button
                         Button(action: {
                             if currentIndex < challenges.count - 1 {
                                 currentIndex += 1
                                 isSolved = false
                             } else {
-                                activeActivityId = nil
+                                // On the last step, call finishActivity
+                                finishActivity()
                             }
                         }) {
                             HStack {
@@ -135,6 +144,26 @@ struct NumbersARView: View {
             }
         }
         self.challenges = newChallenges
+    }
+    
+    // --- NEW HELPER FUNCTION ---
+    private func finishActivity() {
+        let duration = Date().timeIntervalSince(startTime)
+        
+        // We count how many challenges were actually solved
+        let stepsCompleted = isSolved ? (currentIndex + 1) : currentIndex
+        
+        Task {
+            await viewModel.updateProgressAndHistory(
+                activityId: "numbers-in-ar",
+                activityName: "Numbers in AR",
+                totalSteps: challenges.count,
+                stepsCompleted: stepsCompleted,
+                duration: duration
+            )
+            // Dismiss the view after the update is complete
+            activeActivityId = nil
+        }
     }
 }
 
@@ -318,6 +347,8 @@ struct ShapeStep {
 
 // The main SwiftUI view for the Shapes AR Activity
 struct ShapesARView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @State private var startTime = Date()
     @Binding var activeActivityId: ActivityID?
     @State private var currentIndex = 0
     
@@ -363,12 +394,27 @@ struct ShapesARView: View {
                         Image(systemName: "arrow.left")
                     }.modifier(NavButtonModifier())
                     
-                    Button("Finish") { activeActivityId = nil }
-                        .font(.headline)
-                        .padding()
-                        .background(.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(15)
+                    Button("Finish") {
+                        let duration = Date().timeIntervalSince(startTime)
+                        // This assumes the user "completes" the activity by finishing.
+                        // We pass the total number of steps and how many were viewed.
+                        Task {
+                            await viewModel.updateProgressAndHistory(
+                                activityId: "shapes-in-ar",
+                                activityName: "Shapes in AR",
+                                totalSteps: shapeData.count,
+                                stepsCompleted: currentIndex + 1,
+                                duration: duration
+                            )
+                            // Now dismiss the view
+                            activeActivityId = nil
+                        }
+                    }
+                    .font(.headline)
+                    .padding()
+                    .background(.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(15)
                     
                     Button(action: { if currentIndex < shapeData.count - 1 { currentIndex += 1 } }) {
                         Image(systemName: "arrow.right")
@@ -487,6 +533,8 @@ struct ShapesARViewContainer: UIViewRepresentable {
 
 // AR Activity View for Alphabets
 struct ARActivityView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @State private var startTime = Date()
     @Binding var activeActivityId: ActivityID?
     @State private var currentIndex = 0
     
@@ -552,12 +600,27 @@ struct ARActivityView: View {
                     .opacity(currentIndex > 0 ? 1 : 0.3)
                     .disabled(currentIndex <= 0)
                     
-                    Button("Finish") { activeActivityId = nil }
-                        .font(.headline)
-                        .padding()
-                        .background(.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(15)
+                    Button("Finish") {
+                        let duration = Date().timeIntervalSince(startTime)
+                        // This assumes the user "completes" the activity by finishing.
+                        // We pass the total number of steps and how many were viewed.
+                        Task {
+                            await viewModel.updateProgressAndHistory(
+                                activityId: "alphabets-in-ar",
+                                activityName: "Alphabets in AR",
+                                totalSteps: alphabetData.count,
+                                stepsCompleted: currentIndex + 1,
+                                duration: duration
+                            )
+                            // Now dismiss the view
+                            activeActivityId = nil
+                        }
+                    }
+                    .font(.headline)
+                    .padding()
+                    .background(.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(15)
                     
                     Button(action: { if currentIndex < alphabetData.count - 1 { currentIndex += 1 } }) {
                         Image(systemName: "arrow.right")
@@ -986,6 +1049,7 @@ struct ActivityID: Identifiable {
 struct ActivityCardView: View {
     let activityId: String
     let activityName: String
+    var duration: Int? = nil
     
     var body: some View {
         VStack {
@@ -1000,12 +1064,34 @@ struct ActivityCardView: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.primary)
+            
+            // --- ADD THIS BLOCK TO DISPLAY THE DURATION ---
+                       if let duration = duration {
+                           Spacer(minLength: 4)
+                           HStack(spacing: 4) {
+                               Image(systemName: "clock.fill")
+                               Text(formatDuration(duration))
+                           }
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                       }
+                       // ---------------------------------------------
         }
         .padding()
         .background(Color.white)
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
     }
+    
+    private func formatDuration(_ totalSeconds: Int) -> String {
+            let minutes = totalSeconds / 60
+            let seconds = totalSeconds % 60
+            if minutes > 0 {
+                return "\(minutes) min \(seconds) sec"
+            } else {
+                return "\(seconds) sec"
+            }
+        }
     
     @ViewBuilder
     private var activityImageView: some View {
@@ -1152,26 +1238,40 @@ struct ToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     
     var body: some View {
-        VStack(spacing: 25) {
-            Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
-                .resizable()
-                .frame(width: 190, height: 190, alignment: .top)
-                .clipShape(Circle())
-                .padding(.top, 60)
-            
-            Text(viewModel.currentToddlerProfile?.name ?? "Toddler")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-            
-            VStack(spacing: 15) {
-                ProfileOptionButton(title: "Activities", action: {})
-                ProfileOptionButton(title: "Progress", action: {})
-                ProfileOptionButton(title: "Rewards", action: {})
+        // Embed in NavigationView to enable NavigationLinks
+        NavigationView {
+            VStack(spacing: 25) {
+                Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
+                    .resizable()
+                    .frame(width: 190, height: 190, alignment: .top)
+                    .clipShape(Circle())
+                    .padding(.top, 20) // Reduced top padding
+                
+                Text(viewModel.currentToddlerProfile?.name ?? "Toddler")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                
+                VStack(spacing: 15) {
+                    // Changed Buttons to NavigationLinks
+                    NavigationLink(destination: RecentActivitiesView()) {
+                        ProfileOptionButton(title: "Activities")
+                    }
+                    
+                    NavigationLink(destination: ProgressScreenView()) {
+                        ProfileOptionButton(title: "Progress")
+                    }
+                    
+                    // This button can remain as is, or you can build a Rewards screen for it later
+                    Button(action: {}) {
+                        ProfileOptionButton(title: "Rewards")
+                    }
+                }
+                .padding(.top, 20)
+                
+                Spacer()
             }
-            .padding(.top, 20)
-            
-            Spacer()
+            .padding(.horizontal, 30)
+            .navigationBarHidden(true) // Hides the default nav bar title area
         }
-        .padding(.horizontal, 30)
     }
 }
 
@@ -1319,18 +1419,16 @@ struct CategoryButton: View {
 // --- Other Reusable Components (Unchanged) ---
 struct ProfileOptionButton: View {
     let title: String
-    let action: () -> Void
+    // Remove the action from here
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white)
-                .cornerRadius(15)
-                .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
-        }
+        Text(title)
+            .font(.system(size: 20, weight: .semibold, design: .rounded))
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.white)
+            .cornerRadius(15)
+            .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
     }
 }
 
@@ -1406,6 +1504,177 @@ struct IntroPage: View {
                 .padding(.horizontal)
         }
         .padding()
+    }
+}
+
+// In ContentView.swift
+
+// --- NEW SCREEN 1: Toddler's Progress ---
+struct ProgressScreenView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if let profile = viewModel.currentToddlerProfile {
+                    ProgressRow(
+                        title: "Cognitive Skills",
+                        progress: profile.cognitiveSkillsProgress ?? 0,
+                        color: .blue
+                    )
+                    ProgressRow(
+                        title: "Color Perception",
+                        progress: profile.colorPerceptionProgress ?? 0,
+                        color: .purple
+                    )
+                    ProgressRow(
+                        title: "Observation Skills",
+                        progress: profile.observationSkillsProgress ?? 0,
+                        color: .orange
+                    )
+                } else {
+                    Text("No profile data available.")
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Toddler's Progress")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct ProgressRow: View {
+    let title: String
+    let progress: Double
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            ProgressView(value: progress)
+                .progressViewStyle(LinearProgressViewStyle(tint: color))
+                .scaleEffect(x: 1, y: 2, anchor: .center)
+                .shadow(color: color.opacity(0.3), radius: 5, y: 3)
+            Text("\(Int(progress * 100))%")
+                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding()
+        .background(.regularMaterial)
+        .cornerRadius(15)
+    }
+}
+
+
+// --- NEW SCREEN 2: Recent Activities ---
+// --- REPLACE the entire RecentActivitiesView struct ---
+
+struct RecentActivitiesView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    
+    // The view now has its own StateObject for its logic
+    @StateObject private var viewModel: RecentActivitiesViewModel
+
+    init() {
+        // We must initialize the StateObject in the init, passing it the publisher from the parent
+        _viewModel = StateObject(wrappedValue: RecentActivitiesViewModel(historyPublisher: AuthViewModel().$activityHistory))
+    }
+
+    // A two-column grid for the activity cards
+    let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Horizontal scrolling filter bar
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(viewModel.dateFilters) { filter in
+                        FilterButton(filter: filter, isSelected: viewModel.selectedFilter == filter) {
+                            viewModel.selectFilter(filter)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+            }
+            .background(Color(UIColor.systemBackground))
+            .shadow(radius: 1)
+
+            // Grid of activity cards
+            ScrollView {
+                if viewModel.aggregatedRecords.isEmpty {
+                    Text("No activities recorded for this day.")
+                        .foregroundColor(.secondary)
+                        .padding(.top, 50)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(viewModel.aggregatedRecords) { record in
+                            ActivityCardView(
+                                activityId: record.id,
+                                activityName: record.name,
+                                duration: record.totalDuration
+                            )
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .navigationTitle("Recent Activities")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Link the view model to the auth view model's publisher upon appearing
+            // This ensures the ViewModel gets created with the correct data source.
+            viewModel.link(to: authViewModel)
+        }
+    }
+}
+
+// A new subview for the filter buttons
+struct FilterButton: View {
+    let filter: ActivityFilter
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(filterText)
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.orange : Color(UIColor.systemGray5))
+                .foregroundColor(isSelected ? .white : .primary)
+                .cornerRadius(20)
+        }
+    }
+    
+    private var filterText: String {
+        switch filter {
+        case .allTime:
+            return "All Time"
+        case .date(let date):
+            if Calendar.current.isDateInToday(date) { return "Today" }
+            if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: date)
+        }
+    }
+}
+
+extension RecentActivitiesViewModel {
+    func link(to authViewModel: AuthViewModel) {
+        // This re-establishes the subscription with the actual instance of the AuthViewModel
+        authViewModel.$activityHistory
+            .receive(on: RunLoop.main)
+            .sink { [weak self] history in
+                guard let self = self else { return }
+                self.allRecords = history
+                self.generateDateFilters()
+                self.processRecords()
+            }
+            .store(in: &cancellables)
     }
 }
 
