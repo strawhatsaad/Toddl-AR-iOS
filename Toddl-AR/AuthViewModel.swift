@@ -21,6 +21,20 @@ struct ToddlerProfile: Identifiable, Codable {
     let name: String
     let age: String
     let avatarImageName: String // To store the selected avatar
+    
+    // --- ADD THESE LINES ---
+    var cognitiveSkillsProgress: Double? = 0.0
+    var colorPerceptionProgress: Double? = 0.0
+    var observationSkillsProgress: Double? = 0.0
+}
+
+// --- NEW DATA MODEL FOR HISTORY ---
+struct ActivityRecord: Identifiable, Codable, Equatable {
+    @DocumentID var id: String?
+    let activityId: String
+    let activityName: String
+    let dateCompleted: Date
+    let durationInSeconds: Int
 }
 
 // A Codable struct for the User's data
@@ -40,13 +54,15 @@ class AuthViewModel: ObservableObject {
     @Published var currentToddlerProfile: ToddlerProfile?
     @Published var appState: AppState = .splash
     
+    @Published var activityHistory = [ActivityRecord]()
+    
     // Properties for loading states and custom messages
     @Published var isLoading = false
     @Published var showMessage = false
     @Published var messageTitle = ""
     @Published var messageContent = ""
     @Published var messageIsError = false
-
+    
     init() {
         // Check the authentication state when the app starts
         self.userSession = Auth.auth().currentUser
@@ -66,9 +82,9 @@ class AuthViewModel: ObservableObject {
         self.messageIsError = isError
         self.showMessage = true
     }
-
+    
     // --- AUTHENTICATION METHODS ---
-
+    
     func signIn(withEmail email: String, password: String) async {
         isLoading = true
         do {
@@ -82,7 +98,7 @@ class AuthViewModel: ObservableObject {
         // --- UPDATED --- Explicitly set isLoading to false at the end.
         isLoading = false
     }
-
+    
     func signUp(withEmail email: String, password: String, name: String) async {
         isLoading = true
         do {
@@ -103,7 +119,7 @@ class AuthViewModel: ObservableObject {
         // --- UPDATED --- Explicitly set isLoading to false at the end.
         isLoading = false
     }
-
+    
     func signOut() {
         do {
             try Auth.auth().signOut()
@@ -115,7 +131,7 @@ class AuthViewModel: ObservableObject {
             print("DEBUG: Failed to sign out: \(error.localizedDescription)")
         }
     }
-
+    
     // --- FIRESTORE DATA METHODS ---
     
     func fetchUserData() async {
@@ -139,10 +155,10 @@ class AuthViewModel: ObservableObject {
             }
         } catch {
             print("DEBUG: Failed to fetch user data: \(error.localizedDescription)")
-             if self.currentUser != nil {
+            if self.currentUser != nil {
                 self.appState = .toddlerProfileSetup
             } else {
-                 self.appState = .login
+                self.appState = .login
             }
         }
         // --- UPDATED --- Explicitly set isLoading to false at the end.
@@ -171,5 +187,73 @@ class AuthViewModel: ObservableObject {
         }
         // --- UPDATED --- Explicitly set isLoading to false at the end.
         isLoading = false
+    }
+    
+    // --- ADD THIS ENTIRE NEW FUNCTION ---
+    func updateProgressAndHistory(activityId: String, activityName: String, totalSteps: Int, stepsCompleted: Int, duration: TimeInterval) async {
+        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile else { return }
+        
+        // 1. Calculate Progress Increase
+        let progressIncrease = (Double(stepsCompleted) / Double(totalSteps)) * 0.2 // 20% for full completion
+        
+        // 2. Update Progress based on Activity
+        switch activityId {
+        case "alphabets-in-ar":
+            profile.cognitiveSkillsProgress = min(1.0, (profile.cognitiveSkillsProgress ?? 0) + progressIncrease)
+            profile.colorPerceptionProgress = min(1.0, (profile.colorPerceptionProgress ?? 0) + progressIncrease)
+            profile.observationSkillsProgress = min(1.0, (profile.observationSkillsProgress ?? 0) + progressIncrease)
+        case "numbers-in-ar":
+            profile.cognitiveSkillsProgress = min(1.0, (profile.cognitiveSkillsProgress ?? 0) + progressIncrease)
+            profile.observationSkillsProgress = min(1.0, (profile.observationSkillsProgress ?? 0) + progressIncrease)
+        case "shapes-in-ar":
+            profile.colorPerceptionProgress = min(1.0, (profile.colorPerceptionProgress ?? 0) + progressIncrease)
+            profile.observationSkillsProgress = min(1.0, (profile.observationSkillsProgress ?? 0) + progressIncrease)
+        default:
+            break
+        }
+        
+        // 3. Save the new Activity Record to history
+        let newRecord = ActivityRecord(
+            activityId: activityId,
+            activityName: activityName,
+            dateCompleted: Date(),
+            durationInSeconds: Int(duration)
+        )
+        
+        // 4. Update Firestore
+        do {
+            // Update the profile document
+            let encodedProfile = try Firestore.Encoder().encode(profile)
+            try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profile.id!).setData(encodedProfile, merge: true)
+            
+            // Add a new document to the history sub-collection
+            _ = try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profile.id!).collection("activityHistory").addDocument(data: Firestore.Encoder().encode(newRecord))
+            
+            // Update local data
+            self.currentToddlerProfile = profile
+            if !self.activityHistory.contains(newRecord) {
+                self.activityHistory.insert(newRecord, at: 0)
+            }
+            
+        } catch {
+            print("Error updating progress: \(error.localizedDescription)")
+        }
+    }
+    func fetchActivityHistory() async {
+        guard let uid = currentUser?.uid, let profileId = currentToddlerProfile?.id, activityHistory.isEmpty else { return }
+        
+        do {
+            let snapshot = try await Firestore.firestore()
+                .collection("users").document(uid)
+                .collection("toddlers").document(profileId)
+                .collection("activityHistory")
+                .order(by: "dateCompleted", descending: true)
+                .limit(to: 20)
+                .getDocuments()
+            
+            self.activityHistory = snapshot.documents.compactMap { try? $0.data(as: ActivityRecord.self) }
+        } catch {
+            print("Error fetching activity history: \(error.localizedDescription)")
+        }
     }
 }

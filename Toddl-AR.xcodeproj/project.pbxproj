@@ -44,6 +44,9 @@
 		6729D81D2DF87B4E00800159 /* Seahorse.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8192DF87B4E00800159 /* Seahorse.usdz */; };
 		6729D81E2DF87B4E00800159 /* Guitar.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8172DF87B4E00800159 /* Guitar.usdz */; };
 		6729D8202DF8AB3100800159 /* Tree.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D81F2DF8AB3100800159 /* Tree.usdz */; };
+		6729D8242DFA203800800159 /* Cone.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8212DFA203800800159 /* Cone.usdz */; };
+		6729D8252DFA203800800159 /* Pyramid.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8232DFA203800800159 /* Pyramid.usdz */; };
+		6729D8262DFA203800800159 /* Cylinder.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8222DFA203800800159 /* Cylinder.usdz */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +102,9 @@
 		6729D8192DF87B4E00800159 /* Seahorse.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Seahorse.usdz; sourceTree = "<group>"; };
 		6729D81A2DF87B4E00800159 /* Slide.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Slide.usdz; sourceTree = "<group>"; };
 		6729D81F2DF8AB3100800159 /* Tree.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Tree.usdz; sourceTree = "<group>"; };
+		6729D8212DFA203800800159 /* Cone.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Cone.usdz; sourceTree = "<group>"; };
+		6729D8222DFA203800800159 /* Cylinder.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Cylinder.usdz; sourceTree = "<group>"; };
+		6729D8232DFA203800800159 /* Pyramid.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Pyramid.usdz; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -186,6 +192,9 @@
 				6729D7E72DF7F9C200800159 /* Igloo.usdz */,
 				6729D7E82DF7F9C200800159 /* Jam.usdz */,
 				6729D7E92DF7F9C200800159 /* Kite.usdz */,
+				6729D8212DFA203800800159 /* Cone.usdz */,
+				6729D8222DFA203800800159 /* Cylinder.usdz */,
+				6729D8232DFA203800800159 /* Pyramid.usdz */,
 				6729D7EA2DF7F9C200800159 /* Lion.usdz */,
 				6729D8152DF808D400800159 /* Fish.usdz */,
 				6729D81F2DF8AB3100800159 /* Tree.usdz */,
@@ -357,6 +366,9 @@
 				6729D8042DF7F9C200800159 /* Wolf.usdz in Resources */,
 				6729D8052DF7F9C200800159 /* Quack.usdz in Resources */,
 				6729D8062DF7F9C200800159 /* Ball.usdz in Resources */,
+				6729D8242DFA203800800159 /* Cone.usdz in Resources */,
+				6729D8252DFA203800800159 /* Pyramid.usdz in Resources */,
+				6729D8262DFA203800800159 /* Cylinder.usdz in Resources */,
 				6729D8082DF7F9C200800159 /* Nest.usdz in Resources */,
 				6729D8092DF7F9C200800159 /* Rabbit.usdz in Resources */,
 				6729D80A2DF7F9C200800159 /* Apple.usdz in Resources */,

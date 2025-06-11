@@ -47,7 +47,7 @@ struct ContentView: View {
                     isError: viewModel.messageIsError,
                     onDismiss: {
                         if viewModel.messageTitle == "Success!" {
-                             viewModel.appState = .login
+                            viewModel.appState = .login
                         }
                         viewModel.showMessage = false
                     }
@@ -63,12 +63,12 @@ struct NumbersARView: View {
     @State private var challenges: [NumberChallenge] = []
     @State private var currentIndex = 0
     @State private var isSolved = false
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             NumbersARViewContainer(challenge: challenges.isEmpty ? nil : challenges[currentIndex], isSolved: $isSolved)
                 .edgesIgnoringSafeArea(.all)
-
+            
             if !challenges.isEmpty {
                 VStack {
                     HStack {
@@ -80,9 +80,9 @@ struct NumbersARView: View {
                     .background(.regularMaterial)
                     .cornerRadius(15)
                     .padding(.horizontal)
-
+                    
                     Spacer()
-
+                    
                     HStack(spacing: 20) {
                         Button("Finish") {
                             activeActivityId = nil
@@ -92,7 +92,7 @@ struct NumbersARView: View {
                         .background(Color.red.opacity(0.8))
                         .foregroundColor(.white)
                         .cornerRadius(15)
-
+                        
                         Button(action: {
                             if currentIndex < challenges.count - 1 {
                                 currentIndex += 1
@@ -192,35 +192,35 @@ struct NumbersARViewContainer: UIViewRepresentable {
             if newChallenge?.question == self.currentChallenge?.question {
                 return
             }
-
+            
             // --- If it's a NEW challenge, we proceed with the reset ---
-
+            
             self.currentChallenge = newChallenge
             self.previousCountInZone = -1 // Reset the haptic counter
-
+            
             challengeAnchor?.removeFromParent()
             guard let challenge = newChallenge else { return }
-
+            
             // Create a new anchor for a fresh scene
             let anchor = AnchorEntity(plane: .horizontal)
-
+            
             let zoneMesh = MeshResource.generatePlane(width: 0.5, depth: 0.5)
             // The material is created fresh and blue every time
             let zoneMaterial = UnlitMaterial(color: .blue.withAlphaComponent(0.1))
             let zoneEntity = ModelEntity(mesh: zoneMesh, materials: [zoneMaterial])
             zoneEntity.name = "targetZone"
             anchor.addChild(zoneEntity)
-
+            
             // Lay out the initial cubes for the new challenge
             for _ in 0..<challenge.initialCount {
                 anchor.addChild(createCube(inZone: true))
             }
-
+            
             // Lay out the cubes outside the zone
             for _ in 0..<6 {
                 anchor.addChild(createCube(inZone: false))
             }
-
+            
             arView?.scene.addAnchor(anchor)
             self.challengeAnchor = anchor
             recalculateAndCheckSolution()
@@ -301,6 +301,190 @@ struct NumbersARViewContainer: UIViewRepresentable {
     }
 }
 
+// --- NEW --- Shapes in AR Activity
+
+enum ShapeType {
+    case generated(MeshResource)
+    case loaded(named: String)
+}
+
+struct ShapeStep {
+    let name: String
+    let color: UIColor
+    let type: ShapeType
+    var targetSize: Float? = nil
+    var positionOffset: SIMD3<Float>? = nil
+}
+
+// The main SwiftUI view for the Shapes AR Activity
+struct ShapesARView: View {
+    @Binding var activeActivityId: ActivityID?
+    @State private var currentIndex = 0
+    
+    // Updated data source with new shapes
+    let shapeData: [ShapeStep] = [
+        .init(name: "Cube", color: .systemRed, type: .generated(.generateBox(size: 1.0)),
+              targetSize: 0.15),
+        
+            .init(name: "Sphere", color: .systemBlue, type: .generated(.generateSphere(radius: 1.0)),
+                  targetSize: 0.2), // A bit larger
+        
+            .init(name: "Cylinder", color: .systemGreen, type: .loaded(named: "Cylinder.usdz"),
+                  targetSize: 0.002, positionOffset: [0, -0.2, 0]),
+        
+            .init(name: "Pyramid", color: .systemPurple, type: .loaded(named: "Pyramid.usdz"),
+                  targetSize: 0.0025,
+                  positionOffset: [0, 0, 0]), // Move the pyramid up to sit on the "ground"
+        
+            .init(name: "Cone", color: .systemOrange, type: .loaded(named: "Cone.usdz"),
+                  targetSize: 0.0025,
+                  positionOffset: [0, -0.05, 0]), // Move the cone up
+        
+            .init(name: "Box", color: .systemYellow, type: .generated(.generateBox(size: [0.2, 0.05, 0.12]))) // No targetSize, uses the mesh's defined size
+    ]
+    
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            ShapesARViewContainer(models: shapeData, currentIndex: $currentIndex)
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack {
+                Text(shapeData[currentIndex].name)
+                    .font(.system(size: 60, weight: .bold, design: .rounded))
+                    .padding()
+                    .background(.regularMaterial)
+                    .cornerRadius(15)
+                    .padding(.horizontal)
+                
+                Spacer()
+                
+                HStack(spacing: 20) {
+                    Button(action: { if currentIndex > 0 { currentIndex -= 1 } }) {
+                        Image(systemName: "arrow.left")
+                    }.modifier(NavButtonModifier())
+                    
+                    Button("Finish") { activeActivityId = nil }
+                        .font(.headline)
+                        .padding()
+                        .background(.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(15)
+                    
+                    Button(action: { if currentIndex < shapeData.count - 1 { currentIndex += 1 } }) {
+                        Image(systemName: "arrow.right")
+                    }.modifier(NavButtonModifier(disabled: currentIndex >= shapeData.count - 1))
+                }
+                .padding()
+            }
+        }
+    }
+}
+
+// Helper view modifier for navigation buttons
+struct NavButtonModifier: ViewModifier {
+    var disabled: Bool = false
+    func body(content: Content) -> some View {
+        content
+            .font(.largeTitle)
+            .padding()
+            .background(.regularMaterial)
+            .clipShape(Circle())
+            .opacity(disabled ? 0.3 : 1)
+            .disabled(disabled)
+    }
+}
+
+
+// The container that hosts the ARView for the shapes activity
+struct ShapesARViewContainer: UIViewRepresentable {
+    let models: [ShapeStep]
+    @Binding var currentIndex: Int
+    
+    func makeUIView(context: Context) -> ARView {
+        let arView = ARView(frame: .zero)
+        context.coordinator.arView = arView
+        context.coordinator.models = models
+        
+        let config = ARWorldTrackingConfiguration()
+        arView.session.run(config)
+        
+        Task {
+            await context.coordinator.showShape(at: currentIndex)
+        }
+        return arView
+    }
+    
+    func updateUIView(_ uiView: ARView, context: Context) {
+        Task {
+            await context.coordinator.showShape(at: currentIndex)
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    @MainActor
+    class Coordinator: NSObject {
+        weak var arView: ARView?
+        var shapeAnchor: AnchorEntity?
+        var models: [ShapeStep] = []
+        
+        func showShape(at index: Int) async {
+            if let existingAnchor = shapeAnchor {
+                arView?.scene.removeAnchor(existingAnchor)
+            }
+            
+            guard index < models.count else { return }
+            
+            let step = models[index]
+            
+            let anchor = AnchorEntity(world: [0, -0.1, -0.7])
+            let shapeMaterial = SimpleMaterial(color: step.color, roughness: 0.2, isMetallic: false)
+            
+            let shapeEntity: ModelEntity
+            
+            switch step.type {
+            case .generated(let mesh):
+                shapeEntity = ModelEntity(mesh: mesh)
+            case .loaded(let filename):
+                do {
+                    shapeEntity = try await Entity.loadModel(named: filename)
+                } catch {
+                    print("Error: Could not load model \(filename): \(error)")
+                    shapeEntity = ModelEntity(mesh: .generateBox(size: 0.1))
+                }
+            }
+            
+            // --- Apply size and position using the familiar pattern ---
+            if let size = step.targetSize {
+                normalizeAndConfigure(shapeEntity, targetSize: size)
+            }
+            if let offset = step.positionOffset {
+                shapeEntity.position = offset
+            }
+            // -----------------------------------------------------------
+            
+            shapeEntity.model?.materials = [shapeMaterial]
+            anchor.addChild(shapeEntity)
+            arView?.scene.addAnchor(anchor)
+            
+            self.shapeAnchor = anchor
+        }
+        func normalizeAndConfigure(_ entity: ModelEntity, targetSize: Float) {
+            let bounds = entity.visualBounds(relativeTo: nil)
+            let maxDimension = max(bounds.extents.x, bounds.extents.y, bounds.extents.z)
+            if maxDimension > 0 {
+                let scaleFactor = targetSize / maxDimension
+                entity.setScale(SIMD3<Float>(repeating: scaleFactor), relativeTo: nil)
+            }
+            
+            entity.generateCollisionShapes(recursive: true)
+            arView?.installGestures([.all], for: entity)
+        }
+    }
+}
+
 // AR Activity View for Alphabets
 struct ARActivityView: View {
     @Binding var activeActivityId: ActivityID?
@@ -334,7 +518,7 @@ struct ARActivityView: View {
         AlphabetStep(letter: "Y", word: "Yacht", modelName: "Yacht.usdz", color: .systemPurple, targetSize: 0.0095, positionOffset: [0.1, 0, 0]),
         AlphabetStep(letter: "Z", word: "Zebra", modelName: "Zebra.usdz", color: .systemPink, targetSize: 0.0075, positionOffset: [0.1, 0, 0])
     ]
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             ARViewContainer(currentIndex: $currentIndex, models: alphabetData)
@@ -404,7 +588,7 @@ struct AlphabetStep {
 struct ARViewContainer: UIViewRepresentable {
     @Binding var currentIndex: Int
     let models: [AlphabetStep]
-
+    
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
         context.coordinator.arView = arView
@@ -419,22 +603,22 @@ struct ARViewContainer: UIViewRepresentable {
         }
         return arView
     }
-
+    
     func updateUIView(_ uiView: ARView, context: Context) {
         Task {
             await context.coordinator.showAlphabet(at: currentIndex)
         }
     }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
-
+    
     class Coordinator: NSObject {
         weak var arView: ARView?
         var alphabetAnchor: AnchorEntity?
         var models: [AlphabetStep] = []
-
+        
         @MainActor
         func showAlphabet(at index: Int) async {
             // If we have a persistent anchor, remove all the old models from it.
@@ -446,17 +630,17 @@ struct ARViewContainer: UIViewRepresentable {
                 arView?.scene.addAnchor(newAnchor)
                 self.alphabetAnchor = newAnchor
             }
-
+            
             // We can now be sure we have a clean anchor to work with.
             guard let anchor = self.alphabetAnchor else { return }
             guard index < models.count else { return }
-
+            
             let step = models[index]
             
             let letterMesh = MeshResource.generateText(step.letter, extrusionDepth: 0.05, font: .systemFont(ofSize: 0.25, weight: .bold))
             let letterMaterial = SimpleMaterial(color: step.color, roughness: 0.3, isMetallic: false)
             let letterEntity = ModelEntity(mesh: letterMesh, materials: [letterMaterial])
-
+            
             do {
                 let objectEntity = try await ModelEntity(named: step.modelName)
                 
@@ -476,7 +660,7 @@ struct ARViewContainer: UIViewRepresentable {
             
             normalizeAndConfigure(object, targetSize: objectSize)
             normalizeAndConfigure(letter, targetSize: 0.2)
-
+            
             let letterBounds = letter.visualBounds(relativeTo: nil)
             let objectBounds = object.visualBounds(relativeTo: nil)
             
@@ -497,7 +681,7 @@ struct ARViewContainer: UIViewRepresentable {
             anchor.addChild(letter)
             anchor.addChild(object)
         }
-
+        
         func normalizeAndConfigure(_ entity: ModelEntity, targetSize: Float) {
             let bounds = entity.visualBounds(relativeTo: nil)
             let maxDimension = max(bounds.extents.x, bounds.extents.y, bounds.extents.z)
@@ -522,7 +706,7 @@ struct SplashScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0.0
-
+    
     var body: some View {
         ZStack {
             Color.white.edgesIgnoringSafeArea(.all)
@@ -533,7 +717,7 @@ struct SplashScreenView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 180, height: 180)
                     .foregroundColor(Color(red: 0.9, green: 0.5, blue: 0.2))
-
+                
                 Text("Toddl-AR")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
             }
@@ -558,7 +742,7 @@ struct SplashScreenView: View {
 // View for the swipeable intro screens
 struct IntroScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-        
+    
     var body: some View {
         VStack {
             TabView {
@@ -584,7 +768,7 @@ struct LoginView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var email = ""
     @State private var password = ""
-
+    
     var body: some View {
         ZStack {
             Color.white.edgesIgnoringSafeArea(.all)
@@ -596,26 +780,26 @@ struct LoginView: View {
                         .frame(height: 280)
                         .cornerRadius(20)
                         .padding(.top, 40)
-
+                    
                     Text("Log in")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-
+                    
                     CustomTextField(placeholder: "Email", text: $email, iconName: "envelope.fill")
                     CustomSecureField(placeholder: "Password", text: $password)
                     
                     HStack {
                         Spacer()
                         Button("Forgot Password?") {}
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(.orange)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.orange)
                     }
-
+                    
                     PrimaryButton(title: "Log in") {
                         hideKeyboard()
                         Task { await viewModel.signIn(withEmail: email, password: password) }
                     }
                     .padding(.top, 20)
-
+                    
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.gray)
@@ -644,7 +828,7 @@ struct SignUpView: View {
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
-
+    
     var body: some View {
         ZStack {
             Color.white.edgesIgnoringSafeArea(.all)
@@ -660,17 +844,17 @@ struct SignUpView: View {
                     Text("Sign up")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .padding(.bottom, 10)
-
+                    
                     CustomTextField(placeholder: "Name", text: $name, iconName: "person.fill")
                     CustomTextField(placeholder: "Email", text: $email, iconName: "envelope.fill")
                     CustomSecureField(placeholder: "Password", text: $password)
-
+                    
                     PrimaryButton(title: "Sign up") {
                         hideKeyboard()
                         Task { await viewModel.signUp(withEmail: email, password: password, name: name) }
                     }
                     .padding(.top, 30)
-
+                    
                     HStack {
                         Text("Already have an account?")
                             .foregroundColor(.gray)
@@ -698,7 +882,7 @@ struct ToddlerProfileSetupView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var toddlerName = ""
     @State private var toddlerAge = ""
-
+    
     var body: some View {
         ZStack {
             Color.white.edgesIgnoringSafeArea(.all)
@@ -709,12 +893,12 @@ struct ToddlerProfileSetupView: View {
                         .padding(.top, 50)
                     
                     Image("toddler1")
-                         .resizable()
-                         .frame(width: 190, height: 190, alignment: .top)
-                         .clipShape(Circle())
-                         .overlay(Circle().stroke(Color.orange, lineWidth: 4))
-                         .shadow(radius: 10)
-                         .padding(.bottom, 20)
+                        .resizable()
+                        .frame(width: 190, height: 190, alignment: .top)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.orange, lineWidth: 4))
+                        .shadow(radius: 10)
+                        .padding(.bottom, 20)
                     
                     CustomTextField(placeholder: "Toddler's Name", text: $toddlerName, iconName: "face.smiling.fill")
                     CustomTextField(placeholder: "Age", text: $toddlerAge, iconName: "gift.fill")
@@ -722,7 +906,7 @@ struct ToddlerProfileSetupView: View {
                     
                     PrimaryButton(title: "Create Profile") {
                         hideKeyboard()
-                         guard !toddlerName.isEmpty, !toddlerAge.isEmpty else {
+                        guard !toddlerName.isEmpty, !toddlerAge.isEmpty else {
                             viewModel.displayMessage("Error", "Please fill in all fields.", isError: true)
                             return
                         }
@@ -751,18 +935,18 @@ struct MainHubView: View {
     enum Tab {
         case activity, profile, settings
     }
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             Color(UIColor.systemGray6).edgesIgnoringSafeArea(.all)
             
             TabView(selection: $selectedTab.animation(.easeInOut)) {
-                 ActivitiesView(activeActivityId: $activeActivityId).tag(Tab.activity)
-                 ToddlerProfileView().tag(Tab.profile)
-                 SettingsView().tag(Tab.settings)
+                ActivitiesView(activeActivityId: $activeActivityId).tag(Tab.activity)
+                ToddlerProfileView().tag(Tab.profile)
+                SettingsView().tag(Tab.settings)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-                         
+            
             // Custom Tab Bar
             HStack {
                 TabBarButton(iconName: "gamecontroller.fill", tab: .activity, selectedTab: $selectedTab, animation: animation)
@@ -780,9 +964,11 @@ struct MainHubView: View {
         .edgesIgnoringSafeArea(.bottom)
         .fullScreenCover(item: $activeActivityId) { activity in
             if activity.id == "alphabets-in-ar" {
-                 ARActivityView(activeActivityId: $activeActivityId)
+                ARActivityView(activeActivityId: $activeActivityId)
             } else if activity.id == "numbers-in-ar" {
-                 NumbersARView(activeActivityId: $activeActivityId)
+                NumbersARView(activeActivityId: $activeActivityId)
+            } else if activity.id == "shapes-in-ar" {
+                ShapesARView(activeActivityId: $activeActivityId)
             }
         }
     }
@@ -793,11 +979,58 @@ struct ActivityID: Identifiable {
     let id: String
 }
 
+// --- NEW --- Reusable view for the activity cards on the main hub
+
+// Replace the entire ActivityCardView struct with this corrected version.
+
+struct ActivityCardView: View {
+    let activityId: String
+    let activityName: String
+    
+    var body: some View {
+        VStack {
+            // The helper property now contains the necessary modifiers inside it
+            activityImageView
+                .frame(height: 120) // These modifiers work on any view
+                .clipped()
+                .cornerRadius(15)
+            
+            Text(activityName)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.primary)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
+    }
+    
+    @ViewBuilder
+    private var activityImageView: some View {
+        // The conditional logic is now self-contained
+        if activityId == "shapes-in-ar" {
+            ZStack {
+                Color(UIColor.systemGray5)
+                Image(systemName: "square.on.circle")
+                    .font(.system(size: 50))
+                    .foregroundColor(.gray)
+            }
+        } else {
+            // .resizable() and .aspectRatio() are now applied only to the Image
+            Image(activityId)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        }
+    }
+}
+
 // Activities View (Home Screen)
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Binding var activeActivityId: ActivityID?
-
+    
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     @Namespace private var categoryAnimation
@@ -806,11 +1039,11 @@ struct ActivitiesView: View {
     let activities = [
         ("alphabets-in-ar", "Alphabets in AR"),
         ("numbers-in-ar", "Numbers in AR"),
-        ("animals-in-ar", "Animals in AR"),
+        ("shapes-in-ar", "Shapes in AR")
     ]
-
+    
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -840,30 +1073,15 @@ struct ActivitiesView: View {
                     
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(activities, id: \.0) { activityId, activityName in
+                            // We now use our new, reusable card view
                             Button(action: {
                                 self.activeActivityId = ActivityID(id: activityId)
                             }) {
-                                VStack {
-                                    Image(activityId)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(height: 120)
-                                        .clipped()
-                                        .cornerRadius(15)
-                                    Text(activityName)
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.center)
-                                        .foregroundColor(.primary)
-                                }
-                                .padding()
-                                .background(Color.white)
-                                .cornerRadius(20)
-                                .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
+                                ActivityCardView(activityId: activityId, activityName: activityName)
                             }
                         }
                     }
-
+                    
                 }
                 .padding()
             }
@@ -878,7 +1096,7 @@ struct ActivitiesView: View {
 // Settings Screen
 struct SettingsView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-
+    
     var body: some View {
         NavigationView {
             Form {
@@ -890,7 +1108,7 @@ struct SettingsView: View {
                         Text(viewModel.currentUser?.displayName ?? "")
                             .foregroundColor(.gray)
                     }
-                     HStack {
+                    HStack {
                         Image(systemName: "envelope.fill")
                         Text("Email")
                         Spacer()
@@ -901,11 +1119,11 @@ struct SettingsView: View {
                 
                 Section(header: Text("Security")) {
                     Button(action: {}) {
-                       Text("Change Password")
+                        Text("Change Password")
                     }
                     .foregroundColor(.primary)
                 }
-
+                
                 Section(header: Text("Notifications")) {
                     Toggle(isOn: .constant(true)) {
                         Text("Enable Notifications")
@@ -932,7 +1150,7 @@ struct SettingsView: View {
 // Toddler Profile View
 struct ToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-
+    
     var body: some View {
         VStack(spacing: 25) {
             Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
@@ -988,14 +1206,14 @@ struct MessageView: View {
     let onDismiss: () -> Void
     
     @State private var isShowing = false
-
+    
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     // Prevent dismissal by tapping background
                 }
-
+            
             VStack(spacing: 20) {
                 Image(systemName: isError ? "xmark.circle.fill" : "checkmark.circle.fill")
                     .font(.system(size: 60))
@@ -1012,10 +1230,10 @@ struct MessageView: View {
                 
                 PrimaryButton(title: isError ? "Try Again" : "Continue") {
                     withAnimation {
-                       isShowing = false
+                        isShowing = false
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                       onDismiss()
+                        onDismiss()
                     }
                 }
             }
@@ -1042,16 +1260,16 @@ struct TabBarButton: View {
     let tab: MainHubView.Tab
     @Binding var selectedTab: MainHubView.Tab
     let animation: Namespace.ID
-
+    
     var body: some View {
         Button(action: {
-             selectedTab = tab
+            selectedTab = tab
         }) {
             VStack(spacing: 5) {
                 Image(systemName: iconName)
                     .font(.title2)
                     .foregroundColor(selectedTab == tab ? .orange : .gray.opacity(0.6))
-
+                
                 if selectedTab == tab {
                     Capsule()
                         .fill(Color.orange)
@@ -1180,7 +1398,7 @@ struct IntroPage: View {
             Text(title)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
-
+            
             Text(description)
                 .font(.system(size: 18, weight: .medium, design: .rounded))
                 .foregroundColor(.gray)
