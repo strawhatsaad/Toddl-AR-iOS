@@ -1323,7 +1323,9 @@ struct SettingsView: View {
                 // Section 5: Sign Out (Restored)
                 Section {
                     Button(action: {
-                        viewModel.signOut()
+                        Task {
+                            await viewModel.signOut()
+                        }
                     }) {
                         Text("Sign Out")
                             .foregroundColor(.red)
