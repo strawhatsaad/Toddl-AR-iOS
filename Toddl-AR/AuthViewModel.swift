@@ -286,15 +286,21 @@ class AuthViewModel: ObservableObject {
         // Add the redeemed reward's ID to our local copy of the profile
         profile.redeemedRewardIDs.append(reward.id)
         
+        // --- NEW REWARD CYCLE LOGIC ---
+        // If the number of redeemed rewards now equals the total number of rewards available,
+        // it means the cycle is complete. We reset the array to start the cycle again.
+        if profile.redeemedRewardIDs.count == allRewards.count {
+            profile.redeemedRewardIDs = []
+        }
+        
         do {
-            // This is the new, more direct approach.
-            // We are manually telling Firestore to update only the 'redeemedRewardIDs' field.
+            // Save the updated profile to Firestore
             try await Firestore.firestore()
                 .collection("users").document(uid)
                 .collection("toddlers").document(profileId)
                 .updateData(["redeemedRewardIDs": profile.redeemedRewardIDs])
             
-            // Update the local @Published property to match what we just saved
+            // Update the local @Published property to reflect the change
             self.currentToddlerProfile = profile
             
         } catch {
@@ -321,6 +327,7 @@ class AuthViewModel: ObservableObject {
         }
     }
     
+    // --- REPLACE the checkForLevelUp function with this cleaned-up version ---
     private func checkForLevelUp(profile: inout ToddlerProfile) {
         let allProgressFull = profile.cognitiveSkillsProgress >= 1.0 &&
                               profile.colorPerceptionProgress >= 1.0 &&
@@ -338,11 +345,7 @@ class AuthViewModel: ObservableObject {
             // 3. Trigger the celebration popup
             self.showLevelUpPopup = true
             
-            // --- UPDATED REWARD RESET LOGIC ---
-            // Now, the rewards will only reset if the new level is even AND all rewards were redeemed.
-            if profile.level % 2 == 0 && profile.redeemedRewardIDs.count == allRewards.count {
-                profile.redeemedRewardIDs = []
-            }
+            // 4. The old reset logic that was here has been moved to redeemReward()
         }
     }
 }

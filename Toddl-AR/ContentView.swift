@@ -70,6 +70,12 @@ struct ContentView: View {
     }
 }
 
+struct Activity: Identifiable {
+    let id: String
+    let name: String
+    let categories: [String]
+}
+
 // --- NEW --- Numbers in AR Activity
 // In Toddl-AR/ContentView.swift
 
@@ -1126,23 +1132,49 @@ struct ActivityCardView: View {
 }
 
 // Activities View (Home Screen)
+// --- REPLACE the entire ActivitiesView with this new version ---
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Binding var activeActivityId: ActivityID?
-    
+
+    // State for search and filtering
     @State private var searchText = ""
     @State private var selectedCategory = "All"
+    
+    // Haptic generator for UI feedback
+    private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
+
     @Namespace private var categoryAnimation
-    let categories = ["All", "Colors", "Alphabet", "Animals"]
     
-    let activities = [
-        ("alphabets-in-ar", "Alphabets in AR"),
-        ("numbers-in-ar", "Numbers in AR"),
-        ("shapes-in-ar", "Shapes in AR")
+    // New category list
+    let categories = ["All", "Cognitive", "Color", "Observation"]
+    
+    // New structured list of all activities with their categories
+    let allActivities: [Activity] = [
+        .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
+        .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
+        .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"])
     ]
-    
+
+    // This computed property automatically filters the activities based on state
+    private var filteredActivities: [Activity] {
+        var activitiesToShow = allActivities
+        
+        // 1. Filter by the selected category
+        if selectedCategory != "All" {
+            activitiesToShow = allActivities.filter { $0.categories.contains(selectedCategory) }
+        }
+        
+        // 2. Filter by the search text
+        if !searchText.isEmpty {
+            activitiesToShow = activitiesToShow.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+        
+        return activitiesToShow
+    }
+
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -1151,17 +1183,19 @@ struct ActivitiesView: View {
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .padding(.top, 20)
                     
-                    HStack {
-                        CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
-                    }
+                    // Search bar
+                    CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
                     
                     Text("Category")
                         .font(.headline)
                     
+                    // Category filter buttons
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(categories, id: \.self) { category in
                                 CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
+                                    // Add haptic feedback on tap
+                                    hapticGenerator.impactOccurred()
                                     withAnimation(.spring()) {
                                         selectedCategory = category
                                     }
@@ -1170,17 +1204,17 @@ struct ActivitiesView: View {
                         }
                     }
                     
+                    // The grid now uses the filteredActivities list
                     LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(activities, id: \.0) { activityId, activityName in
-                            // We now use our new, reusable card view
+                        ForEach(filteredActivities) { activity in
                             Button(action: {
-                                self.activeActivityId = ActivityID(id: activityId)
+                                self.activeActivityId = ActivityID(id: activity.id)
                             }) {
-                                ActivityCardView(activityId: activityId, activityName: activityName)
+                                ActivityCardView(activityId: activity.id, activityName: activity.name)
                             }
                         }
                     }
-                    
+
                 }
                 .padding()
             }
@@ -1374,15 +1408,22 @@ struct TabBarButton: View {
     @Binding var selectedTab: MainHubView.Tab
     let animation: Namespace.ID
     
+    // Add a light haptic generator for tab switching
+    private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
+
     var body: some View {
         Button(action: {
-            selectedTab = tab
+            // Only trigger haptics and state change if the tab is new
+            if selectedTab != tab {
+                hapticGenerator.impactOccurred()
+                selectedTab = tab
+            }
         }) {
             VStack(spacing: 5) {
                 Image(systemName: iconName)
                     .font(.title2)
                     .foregroundColor(selectedTab == tab ? .orange : .gray.opacity(0.6))
-                
+
                 if selectedTab == tab {
                     Capsule()
                         .fill(Color.orange)
@@ -1703,12 +1744,10 @@ struct FilterButton: View {
     }
 }
 
-// --- REPLACE the entire RewardsScreenView struct with this final version ---
+// --- REPLACE the RewardsScreenView struct with this final version ---
 struct RewardsScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     
-    // We only need one piece of state to manage the sheet.
-    // When this is not nil, the sheet will appear.
     @State private var selectedRewardForConfirmation: Reward?
 
     let columns = [GridItem(.flexible())]
@@ -1720,10 +1759,13 @@ struct RewardsScreenView: View {
                     ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
                         RewardCardView(
                             reward: reward,
-                            isUnlocked: profile.level > index,
+                            
+                            // --- FINAL, CORRECTED UNLOCK LOGIC ---
+                            // This now checks the level progress within the current 5-reward cycle.
+                            isUnlocked: (profile.level % viewModel.allRewards.count) > index,
+                            
                             isRedeemed: profile.redeemedRewardIDs.contains(reward.id),
                             onRedeem: {
-                                // The button's only job is to set the state
                                 self.selectedRewardForConfirmation = reward
                             }
                         )
@@ -1735,11 +1777,7 @@ struct RewardsScreenView: View {
             .padding()
         }
         .navigationTitle("Rewards")
-        // --- Use the .sheet(item:...) modifier ---
-        // This is the most robust way to present a sheet based on an optional item.
         .sheet(item: $selectedRewardForConfirmation) { reward in
-            // Because we're using .sheet(item:), 'reward' is guaranteed to exist here.
-            // No 'if let' needed!
             RedemptionSuccessView(reward: reward)
                 .environmentObject(viewModel)
                 .presentationDetents([.height(400)])
