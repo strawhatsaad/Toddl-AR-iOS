@@ -47,6 +47,10 @@
 		6729D8242DFA203800800159 /* Cone.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8212DFA203800800159 /* Cone.usdz */; };
 		6729D8252DFA203800800159 /* Pyramid.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8232DFA203800800159 /* Pyramid.usdz */; };
 		6729D8262DFA203800800159 /* Cylinder.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 6729D8222DFA203800800159 /* Cylinder.usdz */; };
+		6729D82C2DFA77BB00800159 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D82B2DFA77BB00800159 /* GoogleSignIn */; };
+		6729D82E2DFA77BB00800159 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D82D2DFA77BB00800159 /* GoogleSignInSwift */; };
+		6729D84B2DFA859C00800159 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D84A2DFA859C00800159 /* FirebaseStorage */; };
+		6729D84D2DFA859C00800159 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D84C2DFA859C00800159 /* FirebaseStorageCombine-Community */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -107,9 +111,22 @@
 		6729D8232DFA203800800159 /* Pyramid.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Pyramid.usdz; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6729D8342DFA791500800159 /* Exceptions for "Toddl-AR" folder in "Toddl-AR" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6729D7942DF7AE2A00800159 /* Toddl-AR */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6729D7972DF7AE2A00800159 /* Toddl-AR */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6729D8342DFA791500800159 /* Exceptions for "Toddl-AR" folder in "Toddl-AR" target */,
+			);
 			path = "Toddl-AR";
 			sourceTree = "<group>";
 		};
@@ -132,9 +149,13 @@
 			files = (
 				6729D7CA2DF7C7C300800159 /* FirebaseAuth in Frameworks */,
 				6729D7D22DF7C89100800159 /* FirebaseCore in Frameworks */,
+				6729D82E2DFA77BB00800159 /* GoogleSignInSwift in Frameworks */,
 				6729D7D02DF7C7C300800159 /* FirebaseFirestoreCombine-Community in Frameworks */,
 				6729D7CC2DF7C7C300800159 /* FirebaseAuthCombine-Community in Frameworks */,
+				6729D84B2DFA859C00800159 /* FirebaseStorage in Frameworks */,
 				6729D7CE2DF7C7C300800159 /* FirebaseFirestore in Frameworks */,
+				6729D84D2DFA859C00800159 /* FirebaseStorageCombine-Community in Frameworks */,
+				6729D82C2DFA77BB00800159 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -162,6 +183,7 @@
 				6729D7972DF7AE2A00800159 /* Toddl-AR */,
 				6729D7A52DF7AE2C00800159 /* Toddl-ARTests */,
 				6729D7AF2DF7AE2C00800159 /* Toddl-ARUITests */,
+				6729D8352DFA7CF500800159 /* Frameworks */,
 				6729D7962DF7AE2A00800159 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -218,6 +240,13 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		6729D8352DFA7CF500800159 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -243,6 +272,10 @@
 				6729D7CD2DF7C7C300800159 /* FirebaseFirestore */,
 				6729D7CF2DF7C7C300800159 /* FirebaseFirestoreCombine-Community */,
 				6729D7D12DF7C89100800159 /* FirebaseCore */,
+				6729D82B2DFA77BB00800159 /* GoogleSignIn */,
+				6729D82D2DFA77BB00800159 /* GoogleSignInSwift */,
+				6729D84A2DFA859C00800159 /* FirebaseStorage */,
+				6729D84C2DFA859C00800159 /* FirebaseStorageCombine-Community */,
 			);
 			productName = "Toddl-AR";
 			productReference = 6729D7952DF7AE2A00800159 /* Toddl-AR.app */;
@@ -328,6 +361,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				6729D82A2DFA77BB00800159 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6729D7962DF7AE2A00800159 /* Products */;
@@ -567,6 +601,7 @@
 				DEVELOPMENT_TEAM = B3FHT8VVXU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Toddl-AR/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -597,6 +632,7 @@
 				DEVELOPMENT_TEAM = B3FHT8VVXU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Toddl-AR/Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -735,6 +771,14 @@
 				minimumVersion = 11.14.0;
 			};
 		};
+		6729D82A2DFA77BB00800159 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -762,6 +806,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		6729D82B2DFA77BB00800159 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D82A2DFA77BB00800159 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		6729D82D2DFA77BB00800159 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D82A2DFA77BB00800159 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		6729D84A2DFA859C00800159 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		6729D84C2DFA859C00800159 /* FirebaseStorageCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseStorageCombine-Community";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

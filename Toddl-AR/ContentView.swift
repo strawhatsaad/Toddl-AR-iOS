@@ -15,6 +15,8 @@ extension View {
 struct ContentView: View {
     @StateObject private var viewModel = AuthViewModel()
     
+    //    @StateObject private var screenTimeManager = ScreenTimeManager()
+    
     var body: some View {
         ZStack {
             Group {
@@ -35,9 +37,18 @@ struct ContentView: View {
             }
             .environmentObject(viewModel)
             .animation(.easeInOut, value: viewModel.appState)
+            //            .environmentObject(screenTimeManager)
             
+            // --- REPLACE your existing 'if viewModel.isLoading' block with this ---
             if viewModel.isLoading {
-                LoadingView()
+                // If the app is loading AND on the splash screen...
+                if viewModel.appState == .splash {
+                    // ...show the new progress bar.
+                    SplashLoadingBarView()
+                } else {
+                    // ...otherwise, show the original circular modal.
+                    LoadingView()
+                }
             }
             
             if viewModel.showMessage {
@@ -62,10 +73,10 @@ struct ContentView: View {
             }
             
             // --- ADD THIS BLOCK ---
-                        if viewModel.isRedeemingReward {
-                            RedeemingView()
-                        }
-                        // ---------------------
+            if viewModel.isRedeemingReward {
+                RedeemingView()
+            }
+            // ---------------------
         }
     }
 }
@@ -178,7 +189,8 @@ struct NumbersARView: View {
                 activityName: "Numbers in AR",
                 totalSteps: challenges.count,
                 stepsCompleted: stepsCompleted,
-                duration: duration
+                duration: duration,
+                //                screenTimeManager: screenTimeManager
             )
             // Dismiss the view after the update is complete
             activeActivityId = nil
@@ -423,7 +435,8 @@ struct ShapesARView: View {
                                 activityName: "Shapes in AR",
                                 totalSteps: shapeData.count,
                                 stepsCompleted: currentIndex + 1,
-                                duration: duration
+                                duration: duration,
+                                //                                screenTimeManager: screenTimeManager
                             )
                             // Now dismiss the view
                             activeActivityId = nil
@@ -629,7 +642,8 @@ struct ARActivityView: View {
                                 activityName: "Alphabets in AR",
                                 totalSteps: alphabetData.count,
                                 stepsCompleted: currentIndex + 1,
-                                duration: duration
+                                duration: duration,
+                                //                                screenTimeManager: screenTimeManager
                             )
                             // Now dismiss the view
                             activeActivityId = nil
@@ -869,18 +883,24 @@ struct LoginView: View {
                     CustomTextField(placeholder: "Email", text: $email, iconName: "envelope.fill")
                     CustomSecureField(placeholder: "Password", text: $password)
                     
-                    HStack {
-                        Spacer()
-                        Button("Forgot Password?") {}
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundColor(.orange)
-                    }
-                    
                     PrimaryButton(title: "Log in") {
                         hideKeyboard()
                         Task { await viewModel.signIn(withEmail: email, password: password) }
                     }
                     .padding(.top, 20)
+                    
+                    HStack {
+                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                        Text("OR").foregroundColor(.gray)
+                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                    }
+                    
+                    GoogleSignInButton {
+                        Task {
+                            await viewModel.signInWithGoogle()
+                        }
+                    }
+                    
                     
                     HStack {
                         Text("Don't have an account?")
@@ -936,6 +956,19 @@ struct SignUpView: View {
                         Task { await viewModel.signUp(withEmail: email, password: password, name: name) }
                     }
                     .padding(.top, 30)
+                    
+                    HStack {
+                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                        Text("OR").foregroundColor(.gray)
+                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                    }
+                    
+                    GoogleSignInButton {
+                        Task {
+                            await viewModel.signInWithGoogle()
+                        }
+                    }
+                    
                     
                     HStack {
                         Text("Already have an account?")
@@ -1136,14 +1169,16 @@ struct ActivityCardView: View {
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Binding var activeActivityId: ActivityID?
-
+    
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    
     // State for search and filtering
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     
     // Haptic generator for UI feedback
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
-
+    
     @Namespace private var categoryAnimation
     
     // New category list
@@ -1155,7 +1190,7 @@ struct ActivitiesView: View {
         .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
         .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"])
     ]
-
+    
     // This computed property automatically filters the activities based on state
     private var filteredActivities: [Activity] {
         var activitiesToShow = allActivities
@@ -1172,51 +1207,57 @@ struct ActivitiesView: View {
         
         return activitiesToShow
     }
-
+    
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
+    
     var body: some View {
+        
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Hello,\n\(viewModel.currentUser?.displayName ?? "User")")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .padding(.top, 20)
-                    
-                    // Search bar
-                    CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
-                    
-                    Text("Category")
-                        .font(.headline)
-                    
-                    // Category filter buttons
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(categories, id: \.self) { category in
-                                CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
-                                    // Add haptic feedback on tap
-                                    hapticGenerator.impactOccurred()
-                                    withAnimation(.spring()) {
-                                        selectedCategory = category
+            ZStack{
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Hello,\n\(viewModel.currentUser?.displayName ?? "User")")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .padding(.top, 20)
+                        
+                        // Search bar
+                        CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
+                        
+                        Text("Category")
+                            .font(.headline)
+                        
+                        // Category filter buttons
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(categories, id: \.self) { category in
+                                    CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
+                                        // Add haptic feedback on tap
+                                        hapticGenerator.impactOccurred()
+                                        withAnimation(.spring()) {
+                                            selectedCategory = category
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    
-                    // The grid now uses the filteredActivities list
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(filteredActivities) { activity in
-                            Button(action: {
-                                self.activeActivityId = ActivityID(id: activity.id)
-                            }) {
-                                ActivityCardView(activityId: activity.id, activityName: activity.name)
+                        
+                        // The grid now uses the filteredActivities list
+                        LazyVGrid(columns: columns, spacing: 20) {
+                            ForEach(filteredActivities) { activity in
+                                Button(action: {
+                                    self.activeActivityId = ActivityID(id: activity.id)
+                                }) {
+                                    ActivityCardView(activityId: activity.id, activityName: activity.name)
+                                }
                             }
                         }
+                        
                     }
-
+                    .padding()
                 }
-                .padding()
+                if screenTimeManager.isLocked {
+                    TimeLockedView()
+                }
             }
             .navigationBarHidden(true)
             .onTapGesture {
@@ -1227,12 +1268,17 @@ struct ActivitiesView: View {
 }
 
 // Settings Screen
+// In ContentView.swift
+
+// --- REPLACE the entire SettingsView with this complete version ---
 struct SettingsView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-    
+    @State private var isShowingChangePassword = false // State to control the sheet
+
     var body: some View {
         NavigationView {
             Form {
+                // Section 1: Account Information (Restored)
                 Section(header: Text("Account Information")) {
                     HStack {
                         Image(systemName: "person.crop.circle.fill")
@@ -1241,7 +1287,7 @@ struct SettingsView: View {
                         Text(viewModel.currentUser?.displayName ?? "")
                             .foregroundColor(.gray)
                     }
-                    HStack {
+                     HStack {
                         Image(systemName: "envelope.fill")
                         Text("Email")
                         Spacer()
@@ -1250,19 +1296,30 @@ struct SettingsView: View {
                     }
                 }
                 
+                // Section 2: Security
                 Section(header: Text("Security")) {
-                    Button(action: {}) {
-                        Text("Change Password")
+                    // This button now correctly presents the sheet
+                    Button("Change Password") {
+                        isShowingChangePassword = true
                     }
                     .foregroundColor(.primary)
                 }
                 
+                // Section 3: New "Health" section
+                Section(header: Text("Health")) {
+                    NavigationLink("Screen Time Settings") {
+                        ScreenTimeSettingsView()
+                    }
+                }
+
+                // Section 4: Notifications (Restored)
                 Section(header: Text("Notifications")) {
                     Toggle(isOn: .constant(true)) {
                         Text("Enable Notifications")
                     }
                 }
                 
+                // Section 5: Sign Out (Restored)
                 Section {
                     Button(action: {
                         viewModel.signOut()
@@ -1274,50 +1331,71 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .sheet(isPresented: $isShowingChangePassword) {
+                ChangePasswordView()
+            }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
+        .navigationViewStyle(.stack)
     }
 }
 
 
 // Toddler Profile View
+// --- REPLACE the ToddlerProfileView with this new version for correct alignment ---
+// --- REPLACE the ToddlerProfileView with this new version ---
 struct ToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
+    @State private var isShowingUpdateSheet = false
     
     var body: some View {
-        // Embed in NavigationView to enable NavigationLinks
         NavigationView {
-            VStack(spacing: 25) {
-                Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
-                    .resizable()
-                    .frame(width: 190, height: 190, alignment: .top)
-                    .clipShape(Circle())
-                    .padding(.top, 20) // Reduced top padding
+            // This VStack with Spacers will center the main content
+            VStack {
+                Spacer()
                 
-                Text(viewModel.currentToddlerProfile?.name ?? "Toddler")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                
-                VStack(spacing: 15) {
-                    // Changed Buttons to NavigationLinks
-                    NavigationLink(destination: RecentActivitiesView()) {
-                        ProfileOptionButton(title: "Activities")
-                    }
+                VStack(spacing: 25) {
+                    Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
+                        .resizable()
+                        .frame(width: 190, height: 190, alignment: .top)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.orange, lineWidth: 4))
+                        .shadow(radius: 10)
+                        .padding(.bottom)
                     
-                    NavigationLink(destination: ProgressScreenView()) {
-                        ProfileOptionButton(title: "Progress")
-                    }
+                    Text(viewModel.currentToddlerProfile?.name ?? "Toddler")
+                        .font(.title.bold())
                     
-                    // This button can remain as is, or you can build a Rewards screen for it later
-                    NavigationLink(destination: RewardsScreenView()) {
-                        ProfileOptionButton(title: "Rewards")
+                    VStack(spacing: 15) {
+                        NavigationLink(destination: RecentActivitiesView()) {
+                            ProfileOptionButton(title: "Activities")
+                        }
+                        NavigationLink(destination: ProgressScreenView()) {
+                            ProfileOptionButton(title: "Progress")
+                        }
+                        NavigationLink(destination: RewardsScreenView()) {
+                            ProfileOptionButton(title: "Rewards")
+                        }
+                        // The Edit Profile button remains here
+                        Button {
+                            isShowingUpdateSheet = true
+                        } label: {
+                            ProfileOptionButton(title: "Edit Profile")
+                        }
                     }
+                    .padding(.top, 20)
                 }
-                .padding(.top, 20)
+                .padding(.horizontal, 30)
                 
                 Spacer()
             }
-            .padding(.horizontal, 30)
-            .navigationBarHidden(true) // Hides the default nav bar title area
+            // --- Reverted to the standard navigation bar title ---
+            .navigationTitle("Toddler Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $isShowingUpdateSheet) {
+                if let profile = viewModel.currentToddlerProfile {
+                    UpdateToddlerProfileView(profile: profile)
+                }
+            }
         }
     }
 }
@@ -1410,7 +1488,7 @@ struct TabBarButton: View {
     
     // Add a light haptic generator for tab switching
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
-
+    
     var body: some View {
         Button(action: {
             // Only trigger haptics and state change if the tab is new
@@ -1423,7 +1501,7 @@ struct TabBarButton: View {
                 Image(systemName: iconName)
                     .font(.title2)
                     .foregroundColor(selectedTab == tab ? .orange : .gray.opacity(0.6))
-
+                
                 if selectedTab == tab {
                     Capsule()
                         .fill(Color.orange)
@@ -1566,30 +1644,43 @@ struct IntroPage: View {
 // --- NEW SCREEN 1: Toddler's Progress ---
 struct ProgressScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 if let profile = viewModel.currentToddlerProfile {
-                    // --- ADD THIS LEVEL DISPLAY ---
-                    Text("Current Level: \(profile.level ?? 0)")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                    
+                    // --- ADDED Name and Image ---
+                    Text(profile.name)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                    
+                    Image(profile.avatarImageName)
+                        .resizable()
+                        .frame(width: 150, height: 150)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.orange, lineWidth: 3))
+                        .shadow(radius: 7)
                         .padding(.bottom)
-                    // ------------------------------
+
+                    // --- Current Level Display ---
+                    Text("Current Level: \(profile.level)")
+                        .font(.title2.weight(.semibold))
+                        .padding(.bottom)
+
+                    // --- Progress Bars ---
                     ProgressRow(
                         title: "Cognitive Skills",
-                        progress: profile.cognitiveSkillsProgress ?? 0,
+                        progress: profile.cognitiveSkillsProgress,
                         color: .blue
                     )
                     ProgressRow(
                         title: "Color Perception",
-                        progress: profile.colorPerceptionProgress ?? 0,
+                        progress: profile.colorPerceptionProgress,
                         color: .purple
                     )
                     ProgressRow(
                         title: "Observation Skills",
-                        progress: profile.observationSkillsProgress ?? 0,
+                        progress: profile.observationSkillsProgress,
                         color: .orange
                     )
                 } else {
@@ -1635,7 +1726,7 @@ struct ProgressRow: View {
 struct RecentActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var selectedFilter: ActivityFilter = .allTime
-
+    
     // A computed property that generates the date filter buttons
     private var dateFilters: [ActivityFilter] {
         var filters: [ActivityFilter] = [.allTime]
@@ -1644,7 +1735,7 @@ struct RecentActivitiesView: View {
         filters.append(contentsOf: recentUniqueDates.map { .date($0) })
         return filters
     }
-
+    
     // A computed property that filters and aggregates the records based on the selected filter
     private var aggregatedRecords: [AggregatedActivityRecord] {
         let recordsToProcess: [ActivityRecord]
@@ -1664,9 +1755,9 @@ struct RecentActivitiesView: View {
             return AggregatedActivityRecord(id: firstRecord.activityId, name: firstRecord.activityName, totalDuration: totalDuration)
         }.sorted(by: { $0.name < $1.name }) // Sort alphabetically
     }
-
+    
     let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
-
+    
     var body: some View {
         VStack(spacing: 0) {
             // Horizontal scrolling filter bar
@@ -1682,14 +1773,14 @@ struct RecentActivitiesView: View {
                 .padding(.vertical, 10)
             }
             .background(Color(UIColor.systemGray6))
-
+            
             // Grid of activity cards
             ScrollView {
                 if aggregatedRecords.isEmpty {
                     ContentUnavailableView(
                         "No Activities Recorded",
-                         systemImage: "clock.badge.xmark",
-                         description: Text("Complete some activities to see your history here.")
+                        systemImage: "clock.badge.xmark",
+                        description: Text("Complete some activities to see your history here.")
                     )
                     .padding(.top, 50)
                 } else {
@@ -1749,9 +1840,9 @@ struct RewardsScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     
     @State private var selectedRewardForConfirmation: Reward?
-
+    
     let columns = [GridItem(.flexible())]
-
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -1812,7 +1903,7 @@ struct RewardCardView: View {
                     .multilineTextAlignment(.center)
             }
             .padding()
-
+            
             Spacer(minLength: 0)
             
             // --- NEW LOGIC FOR REDEEMED STATE ---
@@ -1909,7 +2000,7 @@ struct RedemptionSuccessView: View {
     let reward: Reward
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
-
+    
     var body: some View {
         VStack(spacing: 25) {
             Text("🎁")
@@ -1918,7 +2009,7 @@ struct RedemptionSuccessView: View {
             Text("Yay! Reward Unlocked!")
                 .font(.largeTitle).bold()
                 .foregroundColor(.orange)
-
+            
             Text("You've redeemed the **\(reward.title)** reward! Enjoy this special treat as a celebration of all the amazing learning and growth.")
                 .font(.body)
                 .multilineTextAlignment(.center)
@@ -1958,6 +2049,362 @@ struct RedeemingView: View {
             .cornerRadius(20)
             .transition(.opacity)
         }
+    }
+}
+
+// --- NEW VIEW: The Time Lockout Overlay ---
+struct TimeLockedView: View {
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var isShowingPasscodeEntry = false
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 20) {
+                Text("⏳")
+                    .font(.system(size: 80))
+                Text("Whoops, slow down!")
+                    .font(.largeTitle).bold()
+                    .foregroundColor(.white)
+                Text("It's time for a little break. Great job learning today!")
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                
+                Button("15 more minutes, please?") {
+                    isShowingPasscodeEntry = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .padding(.top)
+            }
+            .padding(30)
+        }
+        .sheet(isPresented: $isShowingPasscodeEntry) {
+            PasscodeEntryView(
+                prompt: "Enter passcode to get 15 more minutes.",
+                onSuccess: {
+                    screenTimeManager.grantExtension()
+                    isShowingPasscodeEntry = false
+                }
+            )
+        }
+    }
+}
+
+
+// --- NEW VIEW: Reusable Passcode Entry ---
+struct PasscodeEntryView: View {
+    let prompt: String
+    let onSuccess: () -> Void
+    
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var passcode: String = ""
+    @State private var isCreatingPasscode = false
+    @State private var firstPasscode: String = ""
+    @State private var wrongPasscode = false
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(promptText)
+                .font(.headline)
+                .padding()
+            
+            SecureField("4-digit passcode", text: $passcode)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 150)
+                .multilineTextAlignment(.center)
+            
+            if wrongPasscode {
+                Text("Incorrect passcode. Try again.").foregroundColor(.red)
+            }
+            
+            Button(buttonText) {
+                handleButtonTap()
+            }
+            .buttonStyle(.borderedProminent)
+            
+        }
+        .onAppear {
+            if !screenTimeManager.isPasscodeSet {
+                isCreatingPasscode = true
+            }
+        }
+    }
+    
+    private var promptText: String {
+        if isCreatingPasscode && firstPasscode.isEmpty {
+            return "Create a new 4-digit passcode."
+        } else if isCreatingPasscode {
+            return "Confirm your new passcode."
+        } else {
+            return prompt
+        }
+    }
+    
+    private var buttonText: String {
+        isCreatingPasscode ? "Set Passcode" : "Unlock"
+    }
+    
+    private func handleButtonTap() {
+        if isCreatingPasscode {
+            if firstPasscode.isEmpty {
+                firstPasscode = passcode
+                passcode = ""
+            } else {
+                if firstPasscode == passcode {
+                    screenTimeManager.setPasscode(passcode)
+                    onSuccess()
+                } else {
+                    // Mismatch
+                    passcode = ""
+                    firstPasscode = ""
+                    // Add shake animation or other feedback here
+                }
+            }
+        } else {
+            if screenTimeManager.checkPasscode(passcode) {
+                onSuccess()
+            } else {
+                wrongPasscode = true
+                passcode = ""
+            }
+        }
+    }
+}
+
+
+// --- NEW VIEW: The Screen Time Settings ---
+// --- REPLACE your ScreenTimeSettingsView struct with this version ---
+struct ScreenTimeSettingsView: View {
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var isUnlocked = false
+    
+    // We've changed this from a constant 'let' to a computed 'var'
+    // to allow for more complex creation.
+    var timeOptions: [Int] {
+        // Start with the original options
+        var options = Array(stride(from: 15, through: 120, by: 15))
+        // Add our new 2-minute option for testing
+        options.append(2)
+        // Sort the array so the options appear in the correct order in the picker
+        return options.sorted()
+    }
+    
+    var body: some View {
+        Form {
+            if isUnlocked {
+                Section(header: Text("Daily Screen Time Limit")) {
+                    Picker("Time Limit", selection: $screenTimeManager.dailyLimitInMinutes) {
+                        ForEach(timeOptions, id: \.self) { minutes in
+                            Text("\(minutes) minutes").tag(minutes)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .onChange(of: screenTimeManager.dailyLimitInMinutes) { newLimit in
+                        screenTimeManager.setDailyLimit(newLimit)
+                    }
+                }
+            } else {
+                Text("Enter passcode to manage screen time settings.")
+            }
+        }
+        .navigationTitle("Screen Time")
+        .sheet(isPresented: $isUnlocked.not) {
+            PasscodeEntryView(prompt: "Enter passcode to manage settings.") {
+                isUnlocked = true
+            }
+        }
+    }
+}
+
+// --- NEW Reusable Google Sign In Button ---
+struct GoogleSignInButton: View {
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image("google-logo") // You'll need to add a Google logo image to your assets
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                
+                Text("Sign in with Google")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary.opacity(0.8))
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(15)
+            .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
+        }
+    }
+}
+
+// --- REPLACE the SplashLoadingBarView struct with this new version ---
+struct SplashLoadingBarView: View {
+    @State private var progress: Double = 0.0
+    
+    // We'll use a timer to drive the animation
+    @State private var timer: Timer?
+
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            ProgressView(value: progress)
+                .progressViewStyle(LinearProgressViewStyle(tint: .orange))
+                .padding(.horizontal, 80)
+                .scaleEffect(x: 1, y: 2, anchor: .center)
+                .shadow(color: .orange.opacity(0.3), radius: 5)
+            
+            Text("Loading Profile...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+        }
+        .padding(.bottom, 60)
+        .transition(.opacity.animation(.easeInOut))
+        .onAppear {
+            // Invalidate any existing timer first
+            timer?.invalidate()
+            // Start a new timer when the view appears
+            timer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
+                // On each tick of the timer, increment the progress
+                if self.progress < 0.95 { // We stop it just before 100%
+                    self.progress += 0.01
+                } else {
+                    // Once it's nearly full, stop the timer
+                    self.timer?.invalidate()
+                }
+            }
+        }
+        .onDisappear {
+            // It's very important to stop the timer when the view disappears
+            // to prevent memory leaks.
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+}
+
+// --- NEW SCREEN for updating the profile ---
+struct UpdateToddlerProfileView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    // State to hold the edited values
+    @State private var toddlerName: String
+    @State private var toddlerAge: String
+    
+    // The initializer pre-fills the state with the current profile's data
+    init(profile: ToddlerProfile) {
+        _toddlerName = State(initialValue: profile.name)
+        _toddlerAge = State(initialValue: profile.age)
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Toddler's Details")) {
+                    TextField("Name", text: $toddlerName)
+                    TextField("Age", text: $toddlerAge)
+                        .keyboardType(.numberPad)
+                }
+            }
+            .navigationTitle("Update Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task {
+                            await viewModel.updateToddlerProfile(name: toddlerName, age: toddlerAge)
+                            dismiss()
+                        }
+                    }
+                    // Disable the save button if the name is empty
+                    .disabled(toddlerName.isEmpty)
+                }
+            }
+        }
+    }
+}
+
+// --- NEW SCREEN for changing the password ---
+struct ChangePasswordView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    
+    private var isPasswordValid: Bool {
+        !newPassword.isEmpty && newPassword == confirmPassword
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                // The "Current Password" field only appears for email/password users
+                if viewModel.isPasswordUser {
+                    Section(header: Text("Current Password"), footer: Text("Required to confirm your identity.")) {
+                        SecureField("Enter your current password", text: $currentPassword)
+                    }
+                }
+                
+                Section(header: Text("New Password"), footer: Text(viewModel.isPasswordUser ? "" : "Since you signed in with Google, you can add a password to your account for email-based login.")) {
+                    SecureField("Enter new password", text: $newPassword)
+                    SecureField("Confirm new password", text: $confirmPassword)
+                }
+                
+                if !newPassword.isEmpty && newPassword != confirmPassword {
+                    Text("Passwords do not match.")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.leading)
+                }
+            }
+            .navigationTitle("Change Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task {
+                            await viewModel.changePassword(
+                                currentPassword: currentPassword,
+                                newPassword: newPassword
+                            )
+                            // If the password change was successful, dismiss the sheet
+                            if !viewModel.showMessage || !viewModel.messageIsError {
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(!isPasswordValid)
+                }
+            }
+        }
+    }
+}
+
+// Helper binding extension for the sheet
+extension Binding where Value == Bool {
+    var not: Binding<Bool> {
+        Binding<Bool>(
+            get: { !self.wrappedValue },
+            set: { self.wrappedValue = !$0 }
+        )
     }
 }
 
