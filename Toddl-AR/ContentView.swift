@@ -15,6 +15,8 @@ extension View {
 struct ContentView: View {
     @StateObject private var viewModel = AuthViewModel()
     
+//    @StateObject private var screenTimeManager = ScreenTimeManager()
+    
     var body: some View {
         ZStack {
             Group {
@@ -35,6 +37,7 @@ struct ContentView: View {
             }
             .environmentObject(viewModel)
             .animation(.easeInOut, value: viewModel.appState)
+//            .environmentObject(screenTimeManager)
             
             if viewModel.isLoading {
                 LoadingView()
@@ -178,7 +181,8 @@ struct NumbersARView: View {
                 activityName: "Numbers in AR",
                 totalSteps: challenges.count,
                 stepsCompleted: stepsCompleted,
-                duration: duration
+                duration: duration,
+//                screenTimeManager: screenTimeManager
             )
             // Dismiss the view after the update is complete
             activeActivityId = nil
@@ -423,7 +427,8 @@ struct ShapesARView: View {
                                 activityName: "Shapes in AR",
                                 totalSteps: shapeData.count,
                                 stepsCompleted: currentIndex + 1,
-                                duration: duration
+                                duration: duration,
+//                                screenTimeManager: screenTimeManager
                             )
                             // Now dismiss the view
                             activeActivityId = nil
@@ -629,7 +634,8 @@ struct ARActivityView: View {
                                 activityName: "Alphabets in AR",
                                 totalSteps: alphabetData.count,
                                 stepsCompleted: currentIndex + 1,
-                                duration: duration
+                                duration: duration,
+//                                screenTimeManager: screenTimeManager
                             )
                             // Now dismiss the view
                             activeActivityId = nil
@@ -1136,6 +1142,8 @@ struct ActivityCardView: View {
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Binding var activeActivityId: ActivityID?
+    
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
 
     // State for search and filtering
     @State private var searchText = ""
@@ -1176,47 +1184,53 @@ struct ActivitiesView: View {
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
+        
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Hello,\n\(viewModel.currentUser?.displayName ?? "User")")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .padding(.top, 20)
-                    
-                    // Search bar
-                    CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
-                    
-                    Text("Category")
-                        .font(.headline)
-                    
-                    // Category filter buttons
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(categories, id: \.self) { category in
-                                CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
-                                    // Add haptic feedback on tap
-                                    hapticGenerator.impactOccurred()
-                                    withAnimation(.spring()) {
-                                        selectedCategory = category
+            ZStack{
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Hello,\n\(viewModel.currentUser?.displayName ?? "User")")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .padding(.top, 20)
+                        
+                        // Search bar
+                        CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
+                        
+                        Text("Category")
+                            .font(.headline)
+                        
+                        // Category filter buttons
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(categories, id: \.self) { category in
+                                    CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
+                                        // Add haptic feedback on tap
+                                        hapticGenerator.impactOccurred()
+                                        withAnimation(.spring()) {
+                                            selectedCategory = category
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    
-                    // The grid now uses the filteredActivities list
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        ForEach(filteredActivities) { activity in
-                            Button(action: {
-                                self.activeActivityId = ActivityID(id: activity.id)
-                            }) {
-                                ActivityCardView(activityId: activity.id, activityName: activity.name)
+                        
+                        // The grid now uses the filteredActivities list
+                        LazyVGrid(columns: columns, spacing: 20) {
+                            ForEach(filteredActivities) { activity in
+                                Button(action: {
+                                    self.activeActivityId = ActivityID(id: activity.id)
+                                }) {
+                                    ActivityCardView(activityId: activity.id, activityName: activity.name)
+                                }
                             }
                         }
+                        
                     }
-
+                    .padding()
                 }
-                .padding()
+                if screenTimeManager.isLocked {
+                                TimeLockedView()
+                            }
             }
             .navigationBarHidden(true)
             .onTapGesture {
@@ -1251,6 +1265,11 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("Security")) {
+                    // --- ADD THIS NAVIGATIONLINK ---
+                        NavigationLink("Screen Time Settings") {
+                            ScreenTimeSettingsView()
+                        }
+                    
                     Button(action: {}) {
                         Text("Change Password")
                     }
@@ -1958,6 +1977,185 @@ struct RedeemingView: View {
             .cornerRadius(20)
             .transition(.opacity)
         }
+    }
+}
+
+// --- NEW VIEW: The Time Lockout Overlay ---
+struct TimeLockedView: View {
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var isShowingPasscodeEntry = false
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 20) {
+                Text("⏳")
+                    .font(.system(size: 80))
+                Text("Whoops, slow down!")
+                    .font(.largeTitle).bold()
+                    .foregroundColor(.white)
+                Text("It's time for a little break. Great job learning today!")
+                    .font(.body)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                
+                Button("15 more minutes, please?") {
+                    isShowingPasscodeEntry = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .padding(.top)
+            }
+            .padding(30)
+        }
+        .sheet(isPresented: $isShowingPasscodeEntry) {
+            PasscodeEntryView(
+                prompt: "Enter passcode to get 15 more minutes.",
+                onSuccess: {
+                    screenTimeManager.grantExtension()
+                    isShowingPasscodeEntry = false
+                }
+            )
+        }
+    }
+}
+
+
+// --- NEW VIEW: Reusable Passcode Entry ---
+struct PasscodeEntryView: View {
+    let prompt: String
+    let onSuccess: () -> Void
+    
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var passcode: String = ""
+    @State private var isCreatingPasscode = false
+    @State private var firstPasscode: String = ""
+    @State private var wrongPasscode = false
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(promptText)
+                .font(.headline)
+                .padding()
+            
+            SecureField("4-digit passcode", text: $passcode)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 150)
+                .multilineTextAlignment(.center)
+            
+            if wrongPasscode {
+                Text("Incorrect passcode. Try again.").foregroundColor(.red)
+            }
+            
+            Button(buttonText) {
+                handleButtonTap()
+            }
+            .buttonStyle(.borderedProminent)
+            
+        }
+        .onAppear {
+            if !screenTimeManager.isPasscodeSet {
+                isCreatingPasscode = true
+            }
+        }
+    }
+    
+    private var promptText: String {
+        if isCreatingPasscode && firstPasscode.isEmpty {
+            return "Create a new 4-digit passcode."
+        } else if isCreatingPasscode {
+            return "Confirm your new passcode."
+        } else {
+            return prompt
+        }
+    }
+    
+    private var buttonText: String {
+        isCreatingPasscode ? "Set Passcode" : "Unlock"
+    }
+    
+    private func handleButtonTap() {
+        if isCreatingPasscode {
+            if firstPasscode.isEmpty {
+                firstPasscode = passcode
+                passcode = ""
+            } else {
+                if firstPasscode == passcode {
+                    screenTimeManager.setPasscode(passcode)
+                    onSuccess()
+                } else {
+                    // Mismatch
+                    passcode = ""
+                    firstPasscode = ""
+                    // Add shake animation or other feedback here
+                }
+            }
+        } else {
+            if screenTimeManager.checkPasscode(passcode) {
+                onSuccess()
+            } else {
+                wrongPasscode = true
+                passcode = ""
+            }
+        }
+    }
+}
+
+
+// --- NEW VIEW: The Screen Time Settings ---
+// --- REPLACE your ScreenTimeSettingsView struct with this version ---
+struct ScreenTimeSettingsView: View {
+    @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @State private var isUnlocked = false
+    
+    // We've changed this from a constant 'let' to a computed 'var'
+    // to allow for more complex creation.
+    var timeOptions: [Int] {
+        // Start with the original options
+        var options = Array(stride(from: 15, through: 120, by: 15))
+        // Add our new 2-minute option for testing
+        options.append(2)
+        // Sort the array so the options appear in the correct order in the picker
+        return options.sorted()
+    }
+
+    var body: some View {
+        Form {
+            if isUnlocked {
+                Section(header: Text("Daily Screen Time Limit")) {
+                    Picker("Time Limit", selection: $screenTimeManager.dailyLimitInMinutes) {
+                        ForEach(timeOptions, id: \.self) { minutes in
+                            Text("\(minutes) minutes").tag(minutes)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .onChange(of: screenTimeManager.dailyLimitInMinutes) { newLimit in
+                        screenTimeManager.setDailyLimit(newLimit)
+                    }
+                }
+            } else {
+                Text("Enter passcode to manage screen time settings.")
+            }
+        }
+        .navigationTitle("Screen Time")
+        .sheet(isPresented: $isUnlocked.not) {
+            PasscodeEntryView(prompt: "Enter passcode to manage settings.") {
+                isUnlocked = true
+            }
+        }
+    }
+}
+
+// Helper binding extension for the sheet
+extension Binding where Value == Bool {
+    var not: Binding<Bool> {
+        Binding<Bool>(
+            get: { !self.wrappedValue },
+            set: { self.wrappedValue = !$0 }
+        )
     }
 }
 

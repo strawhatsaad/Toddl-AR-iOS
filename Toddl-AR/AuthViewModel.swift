@@ -243,6 +243,8 @@ class AuthViewModel: ObservableObject {
     func updateProgressAndHistory(activityId: String, activityName: String, totalSteps: Int, stepsCompleted: Int, duration: TimeInterval) async {
         guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
         
+        ScreenTimeManager.shared.addSession(duration: duration)
+        
         let progressIncrease = (Double(stepsCompleted) / Double(totalSteps)) * 0.2
         
         switch activityId {
