@@ -2203,21 +2203,18 @@ struct PasscodeEntryView: View {
 
 // --- NEW VIEW: The Screen Time Settings ---
 // --- REPLACE your ScreenTimeSettingsView struct with this version ---
+// --- REPLACE your ScreenTimeSettingsView struct with this version ---
 struct ScreenTimeSettingsView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
     @State private var isUnlocked = false
-    
-    // We've changed this from a constant 'let' to a computed 'var'
-    // to allow for more complex creation.
+    @State private var isShowingPasscodeView = false // Use a dedicated state to control the sheet
+
     var timeOptions: [Int] {
-        // Start with the original options
         var options = Array(stride(from: 15, through: 120, by: 15))
-        // Add our new 2-minute option for testing
         options.append(2)
-        // Sort the array so the options appear in the correct order in the picker
         return options.sorted()
     }
-    
+
     var body: some View {
         Form {
             if isUnlocked {
@@ -2237,9 +2234,16 @@ struct ScreenTimeSettingsView: View {
             }
         }
         .navigationTitle("Screen Time")
-        .sheet(isPresented: $isUnlocked.not) {
+        .onAppear {
+            // If the view is not unlocked when it appears, set the state to show the sheet.
+            if !isUnlocked {
+                isShowingPasscodeView = true
+            }
+        }
+        .sheet(isPresented: $isShowingPasscodeView) {
             PasscodeEntryView(prompt: "Enter passcode to manage settings.") {
                 isUnlocked = true
+                isShowingPasscodeView = false // Explicitly dismiss the sheet on success
             }
         }
     }
@@ -2423,14 +2427,14 @@ struct ChangePasswordView: View {
 }
 
 // Helper binding extension for the sheet
-extension Binding where Value == Bool {
-    var not: Binding<Bool> {
-        Binding<Bool>(
-            get: { !self.wrappedValue },
-            set: { self.wrappedValue = !$0 }
-        )
-    }
-}
+//extension Binding where Value == Bool {
+//    var not: Binding<Bool> {
+//        Binding<Bool>(
+//            get: { !self.wrappedValue },
+//            set: { self.wrappedValue = !$0 }
+//        )
+//    }
+//}
 
 #Preview {
     ContentView()
