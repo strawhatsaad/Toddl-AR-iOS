@@ -53,6 +53,19 @@ struct ContentView: View {
                     }
                 )
             }
+            
+            // --- ADD THIS LEVEL UP POPUP ---
+            if viewModel.showLevelUpPopup {
+                LevelUpView(onDismiss: {
+                    viewModel.showLevelUpPopup = false
+                })
+            }
+            
+            // --- ADD THIS BLOCK ---
+                        if viewModel.isRedeemingReward {
+                            RedeemingView()
+                        }
+                        // ---------------------
         }
     }
 }
@@ -69,12 +82,12 @@ struct NumbersARView: View {
     @State private var challenges: [NumberChallenge] = []
     @State private var currentIndex = 0
     @State private var isSolved = false
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             NumbersARViewContainer(challenge: challenges.isEmpty ? nil : challenges[currentIndex], isSolved: $isSolved)
                 .edgesIgnoringSafeArea(.all)
-
+            
             if !challenges.isEmpty {
                 VStack {
                     HStack {
@@ -86,9 +99,9 @@ struct NumbersARView: View {
                     .background(.regularMaterial)
                     .cornerRadius(15)
                     .padding(.horizontal)
-
+                    
                     Spacer()
-
+                    
                     HStack(spacing: 20) {
                         // Updated "Finish" button
                         Button("Finish") {
@@ -99,7 +112,7 @@ struct NumbersARView: View {
                         .background(Color.red.opacity(0.8))
                         .foregroundColor(.white)
                         .cornerRadius(15)
-
+                        
                         // Updated "Next/Done!" button
                         Button(action: {
                             if currentIndex < challenges.count - 1 {
@@ -1066,16 +1079,16 @@ struct ActivityCardView: View {
                 .foregroundColor(.primary)
             
             // --- ADD THIS BLOCK TO DISPLAY THE DURATION ---
-                       if let duration = duration {
-                           Spacer(minLength: 4)
-                           HStack(spacing: 4) {
-                               Image(systemName: "clock.fill")
-                               Text(formatDuration(duration))
-                           }
-                           .font(.caption)
-                           .foregroundColor(.secondary)
-                       }
-                       // ---------------------------------------------
+            if let duration = duration {
+                Spacer(minLength: 4)
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.fill")
+                    Text(formatDuration(duration))
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            // ---------------------------------------------
         }
         .padding()
         .background(Color.white)
@@ -1084,14 +1097,14 @@ struct ActivityCardView: View {
     }
     
     private func formatDuration(_ totalSeconds: Int) -> String {
-            let minutes = totalSeconds / 60
-            let seconds = totalSeconds % 60
-            if minutes > 0 {
-                return "\(minutes) min \(seconds) sec"
-            } else {
-                return "\(seconds) sec"
-            }
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        if minutes > 0 {
+            return "\(minutes) min \(seconds) sec"
+        } else {
+            return "\(seconds) sec"
         }
+    }
     
     @ViewBuilder
     private var activityImageView: some View {
@@ -1261,7 +1274,7 @@ struct ToddlerProfileView: View {
                     }
                     
                     // This button can remain as is, or you can build a Rewards screen for it later
-                    Button(action: {}) {
+                    NavigationLink(destination: RewardsScreenView()) {
                         ProfileOptionButton(title: "Rewards")
                     }
                 }
@@ -1517,6 +1530,12 @@ struct ProgressScreenView: View {
         ScrollView {
             VStack(spacing: 20) {
                 if let profile = viewModel.currentToddlerProfile {
+                    // --- ADD THIS LEVEL DISPLAY ---
+                    Text("Current Level: \(profile.level ?? 0)")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .padding(.bottom)
+                    // ------------------------------
                     ProgressRow(
                         title: "Cognitive Skills",
                         progress: profile.cognitiveSkillsProgress ?? 0,
@@ -1570,18 +1589,41 @@ struct ProgressRow: View {
 // --- NEW SCREEN 2: Recent Activities ---
 // --- REPLACE the entire RecentActivitiesView struct ---
 
-struct RecentActivitiesView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
-    
-    // The view now has its own StateObject for its logic
-    @StateObject private var viewModel: RecentActivitiesViewModel
+// --- REPLACE the entire RecentActivitiesView struct with this new simplified version ---
 
-    init() {
-        // We must initialize the StateObject in the init, passing it the publisher from the parent
-        _viewModel = StateObject(wrappedValue: RecentActivitiesViewModel(historyPublisher: AuthViewModel().$activityHistory))
+struct RecentActivitiesView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @State private var selectedFilter: ActivityFilter = .allTime
+
+    // A computed property that generates the date filter buttons
+    private var dateFilters: [ActivityFilter] {
+        var filters: [ActivityFilter] = [.allTime]
+        let uniqueDates = Set(viewModel.activityHistory.map { Calendar.current.startOfDay(for: $0.dateCompleted) })
+        let recentUniqueDates = Array(uniqueDates).sorted(by: >).prefix(7)
+        filters.append(contentsOf: recentUniqueDates.map { .date($0) })
+        return filters
     }
 
-    // A two-column grid for the activity cards
+    // A computed property that filters and aggregates the records based on the selected filter
+    private var aggregatedRecords: [AggregatedActivityRecord] {
+        let recordsToProcess: [ActivityRecord]
+        
+        switch selectedFilter {
+        case .allTime:
+            recordsToProcess = viewModel.activityHistory
+        case .date(let date):
+            recordsToProcess = viewModel.activityHistory.filter { Calendar.current.isDate($0.dateCompleted, inSameDayAs: date) }
+        }
+        
+        let dictionary = Dictionary(grouping: recordsToProcess, by: { $0.activityId })
+        
+        return dictionary.values.compactMap { recordsInGroup -> AggregatedActivityRecord? in
+            guard let firstRecord = recordsInGroup.first else { return nil }
+            let totalDuration = recordsInGroup.reduce(0) { $0 + $1.durationInSeconds }
+            return AggregatedActivityRecord(id: firstRecord.activityId, name: firstRecord.activityName, totalDuration: totalDuration)
+        }.sorted(by: { $0.name < $1.name }) // Sort alphabetically
+    }
+
     let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
 
     var body: some View {
@@ -1589,27 +1631,29 @@ struct RecentActivitiesView: View {
             // Horizontal scrolling filter bar
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(viewModel.dateFilters) { filter in
-                        FilterButton(filter: filter, isSelected: viewModel.selectedFilter == filter) {
-                            viewModel.selectFilter(filter)
+                    ForEach(dateFilters) { filter in
+                        FilterButton(filter: filter, isSelected: selectedFilter == filter) {
+                            self.selectedFilter = filter
                         }
                     }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
             }
-            .background(Color(UIColor.systemBackground))
-            .shadow(radius: 1)
+            .background(Color(UIColor.systemGray6))
 
             // Grid of activity cards
             ScrollView {
-                if viewModel.aggregatedRecords.isEmpty {
-                    Text("No activities recorded for this day.")
-                        .foregroundColor(.secondary)
-                        .padding(.top, 50)
+                if aggregatedRecords.isEmpty {
+                    ContentUnavailableView(
+                        "No Activities Recorded",
+                         systemImage: "clock.badge.xmark",
+                         description: Text("Complete some activities to see your history here.")
+                    )
+                    .padding(.top, 50)
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(viewModel.aggregatedRecords) { record in
+                        ForEach(aggregatedRecords) { record in
                             ActivityCardView(
                                 activityId: record.id,
                                 activityName: record.name,
@@ -1623,11 +1667,7 @@ struct RecentActivitiesView: View {
         }
         .navigationTitle("Recent Activities")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            // Link the view model to the auth view model's publisher upon appearing
-            // This ensures the ViewModel gets created with the correct data source.
-            viewModel.link(to: authViewModel)
-        }
+        // No need to call fetch here anymore, it's handled at app launch
     }
 }
 
@@ -1663,18 +1703,223 @@ struct FilterButton: View {
     }
 }
 
-extension RecentActivitiesViewModel {
-    func link(to authViewModel: AuthViewModel) {
-        // This re-establishes the subscription with the actual instance of the AuthViewModel
-        authViewModel.$activityHistory
-            .receive(on: RunLoop.main)
-            .sink { [weak self] history in
-                guard let self = self else { return }
-                self.allRecords = history
-                self.generateDateFilters()
-                self.processRecords()
+// --- REPLACE the entire RewardsScreenView struct with this final version ---
+struct RewardsScreenView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    
+    // We only need one piece of state to manage the sheet.
+    // When this is not nil, the sheet will appear.
+    @State private var selectedRewardForConfirmation: Reward?
+
+    let columns = [GridItem(.flexible())]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                if let profile = viewModel.currentToddlerProfile {
+                    ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
+                        RewardCardView(
+                            reward: reward,
+                            isUnlocked: profile.level > index,
+                            isRedeemed: profile.redeemedRewardIDs.contains(reward.id),
+                            onRedeem: {
+                                // The button's only job is to set the state
+                                self.selectedRewardForConfirmation = reward
+                            }
+                        )
+                    }
+                }
+                
+                Spacer(minLength: 100)
             }
-            .store(in: &cancellables)
+            .padding()
+        }
+        .navigationTitle("Rewards")
+        // --- Use the .sheet(item:...) modifier ---
+        // This is the most robust way to present a sheet based on an optional item.
+        .sheet(item: $selectedRewardForConfirmation) { reward in
+            // Because we're using .sheet(item:), 'reward' is guaranteed to exist here.
+            // No 'if let' needed!
+            RedemptionSuccessView(reward: reward)
+                .environmentObject(viewModel)
+                .presentationDetents([.height(400)])
+        }
+    }
+}
+
+// --- REPLACE the entire RewardCardView struct with this final version ---
+struct RewardCardView: View {
+    let reward: Reward
+    let isUnlocked: Bool
+    let isRedeemed: Bool
+    let onRedeem: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Image(systemName: reward.imageName)
+                .font(.system(size: 70))
+                .foregroundColor(.orange)
+                .frame(height: 150)
+                .frame(maxWidth: .infinity)
+                .background(Color.orange.opacity(0.1))
+            
+            VStack(spacing: 8) {
+                Text(reward.title)
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+                
+                Text(reward.description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+
+            Spacer(minLength: 0)
+            
+            // --- NEW LOGIC FOR REDEEMED STATE ---
+            // If the reward is redeemed, show the checkmark here instead of the button
+            if isRedeemed {
+                HStack {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(.green)
+                    Text("Redeemed!")
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+                }
+                .font(.title2)
+                .padding(.bottom)
+            } else {
+                // Otherwise, show the redeem button
+                Button(action: onRedeem) {
+                    Text("Redeem Reward")
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .disabled(!isUnlocked) // The button is disabled if not unlocked
+                .padding([.horizontal, .bottom])
+            }
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            // The overlay is now only for the lock icon
+            ZStack {
+                if !isUnlocked {
+                    Color.black.opacity(0.6).clipShape(RoundedRectangle(cornerRadius: 20))
+                    // --- FIX for lock icon position ---
+                    Image(systemName: "lock.fill")
+                        .font(.largeTitle)
+                        .foregroundColor(.white)
+                }
+            }
+        )
+    }
+}
+
+// --- NEW VIEW: LEVEL UP POPUP ---
+struct LevelUpView: View {
+    let onDismiss: () -> Void
+    @State private var isShowing = false
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6).edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 20) {
+                Text("🎉")
+                    .font(.system(size: 80))
+                
+                Text("Level Up!")
+                    .font(.largeTitle).bold()
+                    .foregroundColor(.orange)
+                
+                Text("Hooray! Your little one is reaching new heights. Every milestone is a testament to their growing mind and your wonderful guidance. Keep up the amazing work!")
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                Button("Continue") {
+                    onDismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .padding(.top)
+            }
+            .padding(30)
+            .background(.regularMaterial)
+            .cornerRadius(20)
+            .shadow(radius: 20)
+            .padding(40)
+            .scaleEffect(isShowing ? 1 : 0.5)
+            .opacity(isShowing ? 1 : 0)
+            .onAppear {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    isShowing = true
+                }
+            }
+        }
+        .transition(.opacity)
+    }
+}
+
+// --- NEW VIEW: A POPUP FOR SUCCESSFULLY REDEEMING A REWARD ---
+// --- REPLACE the RedemptionSuccessView struct with this version ---
+struct RedemptionSuccessView: View {
+    let reward: Reward
+    @EnvironmentObject var viewModel: AuthViewModel
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        VStack(spacing: 25) {
+            Text("🎁")
+                .font(.system(size: 80))
+            
+            Text("Yay! Reward Unlocked!")
+                .font(.largeTitle).bold()
+                .foregroundColor(.orange)
+
+            Text("You've redeemed the **\(reward.title)** reward! Enjoy this special treat as a celebration of all the amazing learning and growth.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            // This button now directly calls the ViewModel function
+            Button("Awesome!") {
+                Task {
+                    await viewModel.redeemReward(reward)
+                }
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+            .padding(.top)
+        }
+        .padding(30)
+    }
+}
+
+// --- ADD THIS NEW VIEW FOR THE POPUP ---
+struct RedeemingView: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 20) {
+                Text("🎁")
+                    .font(.system(size: 60))
+                Text("Unlocking Reward...")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+            }
+            .padding(40)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(20)
+            .transition(.opacity)
+        }
     }
 }
 
