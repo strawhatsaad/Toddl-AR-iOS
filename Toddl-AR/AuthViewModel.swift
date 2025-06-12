@@ -29,14 +29,14 @@ struct ToddlerProfile: Identifiable, Codable {
     var observationSkillsProgress: Double
     var level: Int
     var redeemedRewardIDs: [String]
-
+    
     // --- NEW --- Screen Time Properties
     var screenTimePasscode: String?
     var dailyLimitInMinutes: Int
     var timeSpentToday: TimeInterval
     var hasGrantedExtensionToday: Bool
     var lastUsageDate: String // To track the day of the last usage
-
+    
     // CodingKeys to map properties to Firestore fields
     enum CodingKeys: String, CodingKey {
         case id, name, age, avatarImageName, cognitiveSkillsProgress, colorPerceptionProgress, observationSkillsProgress, level, redeemedRewardIDs
@@ -57,7 +57,7 @@ struct ToddlerProfile: Identifiable, Codable {
         observationSkillsProgress = try container.decodeIfPresent(Double.self, forKey: .observationSkillsProgress) ?? 0.0
         level = try container.decodeIfPresent(Int.self, forKey: .level) ?? 0
         redeemedRewardIDs = try container.decodeIfPresent([String].self, forKey: .redeemedRewardIDs) ?? []
-
+        
         // --- NEW --- Decode new properties with sensible defaults
         screenTimePasscode = try container.decodeIfPresent(String.self, forKey: .screenTimePasscode)
         dailyLimitInMinutes = try container.decodeIfPresent(Int.self, forKey: .dailyLimitInMinutes) ?? 60
@@ -151,10 +151,10 @@ class AuthViewModel: ObservableObject {
     @Published var messageIsError = false
     
     // This new property checks if the user's account is password-based
-        var isPasswordUser: Bool {
-            guard let providerId = userSession?.providerData.first?.providerID else { return false }
-            return providerId == "password"
-        }
+    var isPasswordUser: Bool {
+        guard let providerId = userSession?.providerData.first?.providerID else { return false }
+        return providerId == "password"
+    }
     
     let allRewards: [Reward] = [
         .init(id: "playtime", title: "30 Mins of Extra Playtime", description: "Your little explorer has earned some extra fun! Enjoy a bonus 30 minutes of free play as a reward for all their hard work.", imageName: "play.circle"),
@@ -183,7 +183,7 @@ class AuthViewModel: ObservableObject {
         messageIsError = isError
         showMessage = true
     }
-
+    
     func signIn(withEmail email: String, password: String) async {
         isLoading = true
         defer { isLoading = false }
@@ -195,7 +195,7 @@ class AuthViewModel: ObservableObject {
             displayMessage("Sign In Failed", error.localizedDescription, isError: true)
         }
     }
-
+    
     func signUp(withEmail email: String, password: String, name: String) async {
         isLoading = true
         defer { isLoading = false }
@@ -212,23 +212,27 @@ class AuthViewModel: ObservableObject {
             displayMessage("Sign Up Failed", error.localizedDescription, isError: true)
         }
     }
-
-    func signOut() {
+    
+    func signOut() async {
+        // Await the final save of any pending screen time changes.
+        await saveScreenTimeData()
+        
         do {
             try Auth.auth().signOut()
             self.userSession = nil
             self.currentUser = nil
             self.currentToddlerProfile = nil
             self.activityHistory = []
-            // --- ADD THIS ---
-                    ScreenTimeManager.shared.reset()
-                    // ------------------
+            
+            // Reset the manager's state for the next user.
+            ScreenTimeManager.shared.reset()
+            
             self.appState = .login
         } catch {
             print("DEBUG: Failed to sign out: \(error.localizedDescription)")
         }
     }
-
+    
     func fetchUserData() async {
         isLoading = true
         defer { isLoading = false }
@@ -244,11 +248,11 @@ class AuthViewModel: ObservableObject {
                 self.currentToddlerProfile = try toddlerDoc.data(as: ToddlerProfile.self)
                 
                 // --- ADD THIS ---
-                    // Configure the ScreenTimeManager with the loaded profile
-                    if let profile = self.currentToddlerProfile {
-                        ScreenTimeManager.shared.configure(with: profile)
-                    }
-                    // ------------------
+                // Configure the ScreenTimeManager with the loaded profile
+                if let profile = self.currentToddlerProfile {
+                    ScreenTimeManager.shared.configure(with: profile)
+                }
+                // ------------------
                 
                 // --- THIS IS THE KEY FIX ---
                 // Fetch activity history right after loading the profile.
@@ -289,12 +293,12 @@ class AuthViewModel: ObservableObject {
         ScreenTimeManager.shared.addSession(duration: duration)
         
         // --- ADD THIS ---
-            // Get latest usage data and update the profile object before saving
-            let (_, _, timeSpent, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
-            profile.timeSpentToday = timeSpent
-            profile.hasGrantedExtensionToday = hasExtension
-            profile.lastUsageDate = date
-            // ------------------
+        // Get latest usage data and update the profile object before saving
+        let (_, _, timeSpent, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
+        profile.timeSpentToday = timeSpent
+        profile.hasGrantedExtensionToday = hasExtension
+        profile.lastUsageDate = date
+        // ------------------
         
         let progressIncrease = (Double(stepsCompleted) / Double(totalSteps)) * 0.2
         
@@ -383,8 +387,8 @@ class AuthViewModel: ObservableObject {
     // --- REPLACE the checkForLevelUp function with this cleaned-up version ---
     private func checkForLevelUp(profile: inout ToddlerProfile) {
         let allProgressFull = profile.cognitiveSkillsProgress >= 1.0 &&
-                              profile.colorPerceptionProgress >= 1.0 &&
-                              profile.observationSkillsProgress >= 1.0
+        profile.colorPerceptionProgress >= 1.0 &&
+        profile.observationSkillsProgress >= 1.0
         
         if allProgressFull {
             // 1. Level up!
@@ -403,53 +407,53 @@ class AuthViewModel: ObservableObject {
     }
     
     // --- ADD THIS ENTIRE NEW FUNCTION ---
-        func signInWithGoogle() async {
-            isLoading = true
-            
-            // 1. Get the top view controller to present the sign-in flow
-            guard let topVC = UIApplication.shared.keyWindow?.rootViewController else {
-                displayMessage("Error", "Could not find a view to present from.", isError: true)
-                isLoading = false
-                return
-            }
-            
-            do {
-                // 2. Start the Google Sign In flow
-                let gidSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
-                
-                guard let idToken = gidSignInResult.user.idToken?.tokenString else {
-                    throw URLError(.badServerResponse, userInfo: ["message": "Could not fetch Google ID Token."])
-                }
-                let accessToken = gidSignInResult.user.accessToken.tokenString
-                
-                // 3. Create a Firebase credential with the Google ID token
-                let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
-                
-                // 4. Sign in to Firebase with the credential
-                let result = try await Auth.auth().signIn(with: credential)
-                let user = result.user
-                
-                // 5. Check if this is a new user or existing user
-                let userDocRef = Firestore.firestore().collection("users").document(user.uid)
-                let document = try await userDocRef.getDocument()
-                
-                if !document.exists {
-                    // This is a NEW user, create their document in Firestore
-                    print("DEBUG: New user signing in with Google. Creating user document...")
-                    let newUser = AppUser(uid: user.uid, email: user.email ?? "", displayName: user.displayName ?? "User")
-                    try await userDocRef.setData(from: newUser)
-                }
-                
-                // 6. Fetch all user data and proceed
-                self.userSession = user
-                await fetchUserData()
-                
-            } catch {
-                displayMessage("Google Sign-In Failed", error.localizedDescription, isError: true)
-                print("DEBUG: Google Sign-In failed with error: \(error.localizedDescription)")
-                isLoading = false
-            }
+    func signInWithGoogle() async {
+        isLoading = true
+        
+        // 1. Get the top view controller to present the sign-in flow
+        guard let topVC = UIApplication.shared.keyWindow?.rootViewController else {
+            displayMessage("Error", "Could not find a view to present from.", isError: true)
+            isLoading = false
+            return
         }
+        
+        do {
+            // 2. Start the Google Sign In flow
+            let gidSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
+            
+            guard let idToken = gidSignInResult.user.idToken?.tokenString else {
+                throw URLError(.badServerResponse, userInfo: ["message": "Could not fetch Google ID Token."])
+            }
+            let accessToken = gidSignInResult.user.accessToken.tokenString
+            
+            // 3. Create a Firebase credential with the Google ID token
+            let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
+            
+            // 4. Sign in to Firebase with the credential
+            let result = try await Auth.auth().signIn(with: credential)
+            let user = result.user
+            
+            // 5. Check if this is a new user or existing user
+            let userDocRef = Firestore.firestore().collection("users").document(user.uid)
+            let document = try await userDocRef.getDocument()
+            
+            if !document.exists {
+                // This is a NEW user, create their document in Firestore
+                print("DEBUG: New user signing in with Google. Creating user document...")
+                let newUser = AppUser(uid: user.uid, email: user.email ?? "", displayName: user.displayName ?? "User")
+                try await userDocRef.setData(from: newUser)
+            }
+            
+            // 6. Fetch all user data and proceed
+            self.userSession = user
+            await fetchUserData()
+            
+        } catch {
+            displayMessage("Google Sign-In Failed", error.localizedDescription, isError: true)
+            print("DEBUG: Google Sign-In failed with error: \(error.localizedDescription)")
+            isLoading = false
+        }
+    }
     
     // --- ADD THIS NEW FUNCTION ---
     func updateToddlerProfile(name: String, age: String) async {
@@ -478,57 +482,54 @@ class AuthViewModel: ObservableObject {
     }
     
     func changePassword(currentPassword: String?, newPassword: String) async {
-            isLoading = true
-            defer { isLoading = false }
-            
-            guard let user = self.userSession else {
-                displayMessage("Error", "You must be logged in to change your password.", isError: true)
-                return
-            }
-            
-            do {
-                // If it's a standard email/password user, they must re-authenticate first.
-                if isPasswordUser {
-                    guard let email = user.email, let currentPassword = currentPassword, !currentPassword.isEmpty else {
-                        displayMessage("Error", "Your current password is required.", isError: true)
-                        return
-                    }
-                    let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
-                    try await user.reauthenticate(with: credential)
-                }
-                
-                // Now, update to the new password. This works for both account types.
-                // For Google users, it adds a password to their account.
-                try await user.updatePassword(to: newPassword)
-                displayMessage("Success!", "Your password has been changed successfully.", isError: false)
-                
-            } catch {
-                displayMessage("Error", "The operation failed. Please check your current password and try again.", isError: true)
-                print("DEBUG: Password change failed: \(error.localizedDescription)")
-            }
+        isLoading = true
+        defer { isLoading = false }
+        
+        guard let user = self.userSession else {
+            displayMessage("Error", "You must be logged in to change your password.", isError: true)
+            return
         }
+        
+        do {
+            // If it's a standard email/password user, they must re-authenticate first.
+            if isPasswordUser {
+                guard let email = user.email, let currentPassword = currentPassword, !currentPassword.isEmpty else {
+                    displayMessage("Error", "Your current password is required.", isError: true)
+                    return
+                }
+                let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
+                try await user.reauthenticate(with: credential)
+            }
+            
+            // Now, update to the new password. This works for both account types.
+            // For Google users, it adds a password to their account.
+            try await user.updatePassword(to: newPassword)
+            displayMessage("Success!", "Your password has been changed successfully.", isError: false)
+            
+        } catch {
+            displayMessage("Error", "The operation failed. Please check your current password and try again.", isError: true)
+            print("DEBUG: Password change failed: \(error.localizedDescription)")
+        }
+    }
     
     // --- NEW --- Saves the current state of the ScreenTimeManager to Firestore
-    func saveScreenTimeData() {
+    func saveScreenTimeData() async {
         guard var profile = self.currentToddlerProfile else { return }
-
+        
         // Get the latest data from the manager
         let (passcode, limit, usage, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
-
+        
         profile.screenTimePasscode = passcode
         profile.dailyLimitInMinutes = limit
         profile.timeSpentToday = usage
         profile.hasGrantedExtensionToday = hasExtension
         profile.lastUsageDate = date
-
+        
         // Update the local profile and save to Firestore
         self.currentToddlerProfile = profile
-
-        Task {
-            await saveToddlerProfile(profile)
-        }
+        await saveToddlerProfile(profile)
     }
-
+    
     // --- NEW --- Helper function to persist the profile
     private func saveToddlerProfile(_ profile: ToddlerProfile) async {
         guard let uid = currentUser?.uid, let profileId = profile.id else { return }
