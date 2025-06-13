@@ -1765,10 +1765,19 @@ struct RecentActivitiesView: View {
     
     // A computed property that generates the date filter buttons
     private var dateFilters: [ActivityFilter] {
+        var uniqueDates: [Date] = []
+        for record in viewModel.activityHistory {
+            let date = Calendar.current.startOfDay(for: record.dateCompleted)
+            if !uniqueDates.contains(date) {
+                uniqueDates.append(date)
+            }
+        }
+        
+        let sortedDates = uniqueDates.sorted(by: >)
+        
         var filters: [ActivityFilter] = [.allTime]
-        let uniqueDates = Set(viewModel.activityHistory.map { Calendar.current.startOfDay(for: $0.dateCompleted) })
-        let recentUniqueDates = Array(uniqueDates).sorted(by: >).prefix(7)
-        filters.append(contentsOf: recentUniqueDates.map { .date($0) })
+        filters.append(contentsOf: sortedDates.prefix(7).map { .date($0) })
+        
         return filters
     }
     
