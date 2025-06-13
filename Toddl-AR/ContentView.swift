@@ -2091,8 +2091,10 @@ struct TimeLockedView: View {
             Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
 
             VStack(spacing: 20) {
-                Text("竢ｳ")
+                // --- THIS IS THE FIX ---
+                Text("⌛")
                     .font(.system(size: 80))
+                // -----------------------
                 Text("Whoops, slow down!")
                     .font(.largeTitle).bold()
                     .foregroundColor(.white)
