@@ -1,9 +1,4 @@
-//
-//  AuthViewModel.swift
-//  Toddl-AR
-//
-//  Created by Saad Anjum on 10/06/2025.
-//
+// Toddl-AR/AuthViewModel.swift
 
 import SwiftUI
 import Firebase
@@ -17,7 +12,7 @@ enum AppState {
     case splash, intro, login, signUp, toddlerProfileSetup, mainHub
 }
 
-struct ToddlerProfile: Identifiable, Codable {
+struct ToddlerProfile: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     var name: String
     var age: String
@@ -137,7 +132,8 @@ class AuthViewModel: ObservableObject {
     // MARK: Published Properties
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: AppUser?
-    @Published var currentToddlerProfile: ToddlerProfile?
+    @Published var toddlerProfiles: [ToddlerProfile] = []
+    @Published var selectedToddlerProfile: ToddlerProfile?
     @Published var appState: AppState = .splash
     
     @Published var activityHistory = [ActivityRecord]()
@@ -221,7 +217,8 @@ class AuthViewModel: ObservableObject {
             try Auth.auth().signOut()
             self.userSession = nil
             self.currentUser = nil
-            self.currentToddlerProfile = nil
+            self.toddlerProfiles = []
+            self.selectedToddlerProfile = nil
             self.activityHistory = []
             
             // Reset the manager's state for the next user.
@@ -242,20 +239,16 @@ class AuthViewModel: ObservableObject {
             let userDocument = try await Firestore.firestore().collection("users").document(uid).getDocument()
             self.currentUser = try userDocument.data(as: AppUser.self)
             
-            let toddlerSnapshot = try await Firestore.firestore().collection("users").document(uid).collection("toddlers").limit(to: 1).getDocuments()
-            
-            if let toddlerDoc = toddlerSnapshot.documents.first {
-                self.currentToddlerProfile = try toddlerDoc.data(as: ToddlerProfile.self)
+            let toddlerSnapshot = try await Firestore.firestore().collection("users").document(uid).collection("toddlers").getDocuments()
+            self.toddlerProfiles = toddlerSnapshot.documents.compactMap { try? $0.data(as: ToddlerProfile.self) }
+
+            if !self.toddlerProfiles.isEmpty {
+                self.selectedToddlerProfile = self.toddlerProfiles.first
                 
-                // --- ADD THIS ---
-                // Configure the ScreenTimeManager with the loaded profile
-                if let profile = self.currentToddlerProfile {
+                if let profile = self.selectedToddlerProfile {
                     ScreenTimeManager.shared.configure(with: profile)
                 }
-                // ------------------
                 
-                // --- THIS IS THE KEY FIX ---
-                // Fetch activity history right after loading the profile.
                 await fetchActivityHistory()
                 
                 self.appState = .mainHub
@@ -280,25 +273,31 @@ class AuthViewModel: ObservableObject {
             newProfile.id = newDocRef.documentID
             try await newDocRef.setData(from: newProfile)
             
-            self.currentToddlerProfile = newProfile
+            self.toddlerProfiles.append(newProfile)
+            self.selectedToddlerProfile = newProfile
             self.appState = .mainHub
         } catch {
             displayMessage("Profile Creation Failed", error.localizedDescription, isError: true)
         }
     }
+
+    func switchToddlerProfile(to profile: ToddlerProfile?) {
+        guard let profile = profile else { return }
+        self.selectedToddlerProfile = profile
+        Task {
+            await fetchActivityHistory()
+        }
+    }
     
     func updateProgressAndHistory(activityId: String, activityName: String, totalSteps: Int, stepsCompleted: Int, duration: TimeInterval) async {
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
         ScreenTimeManager.shared.addSession(duration: duration)
         
-        // --- ADD THIS ---
-        // Get latest usage data and update the profile object before saving
         let (_, _, timeSpent, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
         profile.timeSpentToday = timeSpent
         profile.hasGrantedExtensionToday = hasExtension
         profile.lastUsageDate = date
-        // ------------------
         
         let progressIncrease = (Double(stepsCompleted) / Double(totalSteps)) * 0.2
         
@@ -324,7 +323,7 @@ class AuthViewModel: ObservableObject {
             try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).setData(from: profile, merge: true)
             try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).collection("activityHistory").addDocument(from: newRecord)
             
-            self.currentToddlerProfile = profile
+            self.selectedToddlerProfile = profile
             if !self.activityHistory.contains(newRecord) {
                 self.activityHistory.insert(newRecord, at: 0)
             }
@@ -333,41 +332,36 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- REPLACE the entire redeemReward function with this version ---
     func redeemReward(_ reward: Reward) async {
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
         self.isRedeemingReward = true
         defer { self.isRedeemingReward = false }
         
-        // Add the redeemed reward's ID to our local copy of the profile
         profile.redeemedRewardIDs.append(reward.id)
         
-        // --- NEW REWARD CYCLE LOGIC ---
-        // If the number of redeemed rewards now equals the total number of rewards available,
-        // it means the cycle is complete. We reset the array to start the cycle again.
         if profile.redeemedRewardIDs.count == allRewards.count {
             profile.redeemedRewardIDs = []
         }
         
         do {
-            // Save the updated profile to Firestore
             try await Firestore.firestore()
                 .collection("users").document(uid)
                 .collection("toddlers").document(profileId)
                 .updateData(["redeemedRewardIDs": profile.redeemedRewardIDs])
             
-            // Update the local @Published property to reflect the change
-            self.currentToddlerProfile = profile
+            self.selectedToddlerProfile = profile
             
         } catch {
             print("Error redeeming reward: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - Private Methods
     private func fetchActivityHistory() async {
-        guard let uid = currentUser?.uid, let profileId = currentToddlerProfile?.id else { return }
+        guard let uid = currentUser?.uid, let profileId = selectedToddlerProfile?.id else {
+            self.activityHistory = []
+            return
+        }
         
         do {
             let snapshot = try await Firestore.firestore()
@@ -384,33 +378,25 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- REPLACE the checkForLevelUp function with this cleaned-up version ---
     private func checkForLevelUp(profile: inout ToddlerProfile) {
         let allProgressFull = profile.cognitiveSkillsProgress >= 1.0 &&
         profile.colorPerceptionProgress >= 1.0 &&
         profile.observationSkillsProgress >= 1.0
         
         if allProgressFull {
-            // 1. Level up!
             profile.level = profile.level + 1
             
-            // 2. Reset progress bars
             profile.cognitiveSkillsProgress = 0.0
             profile.colorPerceptionProgress = 0.0
             profile.observationSkillsProgress = 0.0
             
-            // 3. Trigger the celebration popup
             self.showLevelUpPopup = true
-            
-            // 4. The old reset logic that was here has been moved to redeemReward()
         }
     }
     
-    // --- ADD THIS ENTIRE NEW FUNCTION ---
     func signInWithGoogle() async {
         isLoading = true
         
-        // 1. Get the top view controller to present the sign-in flow
         guard let topVC = UIApplication.shared.keyWindow?.rootViewController else {
             displayMessage("Error", "Could not find a view to present from.", isError: true)
             isLoading = false
@@ -418,7 +404,6 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            // 2. Start the Google Sign In flow
             let gidSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
             
             guard let idToken = gidSignInResult.user.idToken?.tokenString else {
@@ -426,25 +411,20 @@ class AuthViewModel: ObservableObject {
             }
             let accessToken = gidSignInResult.user.accessToken.tokenString
             
-            // 3. Create a Firebase credential with the Google ID token
             let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
             
-            // 4. Sign in to Firebase with the credential
             let result = try await Auth.auth().signIn(with: credential)
             let user = result.user
             
-            // 5. Check if this is a new user or existing user
             let userDocRef = Firestore.firestore().collection("users").document(user.uid)
             let document = try await userDocRef.getDocument()
             
             if !document.exists {
-                // This is a NEW user, create their document in Firestore
                 print("DEBUG: New user signing in with Google. Creating user document...")
                 let newUser = AppUser(uid: user.uid, email: user.email ?? "", displayName: user.displayName ?? "User")
                 try await userDocRef.setData(from: newUser)
             }
             
-            // 6. Fetch all user data and proceed
             self.userSession = user
             await fetchUserData()
             
@@ -455,27 +435,25 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- ADD THIS NEW FUNCTION ---
     func updateToddlerProfile(name: String, age: String) async {
         isLoading = true
         defer { isLoading = false }
         
-        // Ensure we have all the necessary data
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
-        // Update the local copy of the profile with the new details
         profile.name = name
         profile.age = age
         
         do {
-            // Save the entire updated profile back to Firestore
             try await Firestore.firestore()
                 .collection("users").document(uid)
                 .collection("toddlers").document(profileId)
                 .setData(from: profile, merge: true)
             
-            // Update the @Published property to make the UI refresh instantly
-            self.currentToddlerProfile = profile
+            if let index = self.toddlerProfiles.firstIndex(where: { $0.id == profileId }) {
+                self.toddlerProfiles[index] = profile
+                self.selectedToddlerProfile = profile
+            }
         } catch {
             displayMessage("Profile Update Failed", error.localizedDescription, isError: true)
         }
@@ -491,7 +469,6 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            // If it's a standard email/password user, they must re-authenticate first.
             if isPasswordUser {
                 guard let email = user.email, let currentPassword = currentPassword, !currentPassword.isEmpty else {
                     displayMessage("Error", "Your current password is required.", isError: true)
@@ -501,8 +478,6 @@ class AuthViewModel: ObservableObject {
                 try await user.reauthenticate(with: credential)
             }
             
-            // Now, update to the new password. This works for both account types.
-            // For Google users, it adds a password to their account.
             try await user.updatePassword(to: newPassword)
             displayMessage("Success!", "Your password has been changed successfully.", isError: false)
             
@@ -512,11 +487,9 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- NEW --- Saves the current state of the ScreenTimeManager to Firestore
     func saveScreenTimeData() async {
-        guard var profile = self.currentToddlerProfile else { return }
+        guard var profile = self.selectedToddlerProfile else { return }
         
-        // Get the latest data from the manager
         let (passcode, limit, usage, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
         
         profile.screenTimePasscode = passcode
@@ -525,12 +498,10 @@ class AuthViewModel: ObservableObject {
         profile.hasGrantedExtensionToday = hasExtension
         profile.lastUsageDate = date
         
-        // Update the local profile and save to Firestore
-        self.currentToddlerProfile = profile
+        self.selectedToddlerProfile = profile
         await saveToddlerProfile(profile)
     }
     
-    // --- NEW --- Helper function to persist the profile
     private func saveToddlerProfile(_ profile: ToddlerProfile) async {
         guard let uid = currentUser?.uid, let profileId = profile.id else { return }
         do {
@@ -545,39 +516,59 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- NEW --- Sets the screen time passcode and saves it to Firestore.
-        func setScreenTimePasscode(passcode: String) async {
-            // 1. Update the in-memory state in the manager for immediate UI feedback.
+    func setScreenTimePasscode(passcode: String) async {
             ScreenTimeManager.shared.setPasscode(passcode)
             
-            // 2. Get the current profile, update it, and save it to the database.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             profile.screenTimePasscode = passcode
             await saveToddlerProfile(profile)
         }
         
-        // --- NEW --- Sets the daily time limit and saves it to Firestore.
         func setScreenTimeLimit(minutes: Int) async {
-            // 1. Update the in-memory state.
             ScreenTimeManager.shared.setDailyLimit(minutes)
 
-            // 2. Get the current profile, update it, and save it to the database.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             profile.dailyLimitInMinutes = minutes
             await saveToddlerProfile(profile)
         }
 
-        // --- NEW --- Grants a time extension and saves it to Firestore.
         func grantScreenTimeExtension() async {
-            // 1. Update the in-memory state.
             ScreenTimeManager.shared.grantExtension()
 
-            // 2. Get the current profile, update it with the extension status, and save.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             let (_, _, _, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
             profile.hasGrantedExtensionToday = hasExtension
             profile.lastUsageDate = date
             await saveToddlerProfile(profile)
+        }
+    
+    func deleteToddlerProfile(profile: ToddlerProfile) async {
+            guard let uid = currentUser?.uid, let profileId = profile.id else { return }
+            
+            isLoading = true
+            defer { isLoading = false }
+            
+            do {
+                // Delete the profile from Firestore
+                try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).delete()
+                
+                // Remove the profile from the local array
+                if let index = self.toddlerProfiles.firstIndex(where: { $0.id == profileId }) {
+                    self.toddlerProfiles.remove(at: index)
+                }
+                
+                // Update the selected profile
+                if self.toddlerProfiles.isEmpty {
+                    self.selectedToddlerProfile = nil
+                    self.appState = .toddlerProfileSetup
+                } else {
+                    self.selectedToddlerProfile = self.toddlerProfiles.first
+                    await fetchActivityHistory()
+                }
+                
+            } catch {
+                displayMessage("Profile Deletion Failed", error.localizedDescription, isError: true)
+            }
         }
 }
 
