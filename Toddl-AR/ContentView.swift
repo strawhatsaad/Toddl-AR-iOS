@@ -1,3 +1,4 @@
+// Toddl-AR/ContentView.swift
 import SwiftUI
 import RealityKit
 import Combine
@@ -1093,6 +1094,8 @@ struct MainHubView: View {
                 NumbersARView(activeActivityId: $activeActivityId)
             } else if activity.id == "shapes-in-ar" {
                 ShapesARView(activeActivityId: $activeActivityId)
+            } else if activity.id == "ar-doodling" {
+                ARDoodleView(activeActivityId: $activeActivityId)
             }
         }
     }
@@ -1182,13 +1185,14 @@ struct ActivitiesView: View {
     @Namespace private var categoryAnimation
     
     // New category list
-    let categories = ["All", "Cognitive", "Color", "Observation"]
+    let categories = ["All", "Cognitive", "Color", "Observation", "Creative"]
     
     // New structured list of all activities with their categories
     let allActivities: [Activity] = [
         .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
         .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
-        .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"])
+        .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"]),
+        .init(id: "ar-doodling", name: "AR Doodling", categories: ["Creative"])
     ]
     
     // This computed property automatically filters the activities based on state
