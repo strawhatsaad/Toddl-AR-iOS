@@ -544,6 +544,41 @@ class AuthViewModel: ObservableObject {
             print("DEBUG: Could not save profile: \(error.localizedDescription)")
         }
     }
+    
+    // --- NEW --- Sets the screen time passcode and saves it to Firestore.
+        func setScreenTimePasscode(passcode: String) async {
+            // 1. Update the in-memory state in the manager for immediate UI feedback.
+            ScreenTimeManager.shared.setPasscode(passcode)
+            
+            // 2. Get the current profile, update it, and save it to the database.
+            guard var profile = self.currentToddlerProfile else { return }
+            profile.screenTimePasscode = passcode
+            await saveToddlerProfile(profile)
+        }
+        
+        // --- NEW --- Sets the daily time limit and saves it to Firestore.
+        func setScreenTimeLimit(minutes: Int) async {
+            // 1. Update the in-memory state.
+            ScreenTimeManager.shared.setDailyLimit(minutes)
+
+            // 2. Get the current profile, update it, and save it to the database.
+            guard var profile = self.currentToddlerProfile else { return }
+            profile.dailyLimitInMinutes = minutes
+            await saveToddlerProfile(profile)
+        }
+
+        // --- NEW --- Grants a time extension and saves it to Firestore.
+        func grantScreenTimeExtension() async {
+            // 1. Update the in-memory state.
+            ScreenTimeManager.shared.grantExtension()
+
+            // 2. Get the current profile, update it with the extension status, and save.
+            guard var profile = self.currentToddlerProfile else { return }
+            let (_, _, _, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
+            profile.hasGrantedExtensionToday = hasExtension
+            profile.lastUsageDate = date
+            await saveToddlerProfile(profile)
+        }
 }
 
 

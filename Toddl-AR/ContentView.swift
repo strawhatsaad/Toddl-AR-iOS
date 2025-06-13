@@ -2078,18 +2078,23 @@ struct RedeemingView: View {
     }
 }
 
-// --- NEW VIEW: The Time Lockout Overlay ---
+// In ContentView.swift
+
+// --- Replace the entire TimeLockedView struct ---
 struct TimeLockedView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var isShowingPasscodeEntry = false
-    
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
-            
+
             VStack(spacing: 20) {
-                Text("⏳")
+                // --- THIS IS THE FIX ---
+                Text("⌛")
                     .font(.system(size: 80))
+                // -----------------------
                 Text("Whoops, slow down!")
                     .font(.largeTitle).bold()
                     .foregroundColor(.white)
@@ -2097,7 +2102,7 @@ struct TimeLockedView: View {
                     .font(.body)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                
+
                 Button("15 more minutes, please?") {
                     isShowingPasscodeEntry = true
                 }
@@ -2111,8 +2116,13 @@ struct TimeLockedView: View {
             PasscodeEntryView(
                 prompt: "Enter passcode to get 15 more minutes.",
                 onSuccess: {
-                    screenTimeManager.grantExtension()
-                    isShowingPasscodeEntry = false
+                    // --- THIS IS THE FIX ---
+                    // Call the view model to grant and save the extension.
+                    Task {
+                        await viewModel.grantScreenTimeExtension()
+                        isShowingPasscodeEntry = false
+                    }
+                    // ------------------------
                 }
             )
         }
@@ -2120,39 +2130,42 @@ struct TimeLockedView: View {
 }
 
 
-// --- NEW VIEW: Reusable Passcode Entry ---
+// In ContentView.swift
+
+// --- Replace the entire PasscodeEntryView struct ---
 struct PasscodeEntryView: View {
     let prompt: String
     let onSuccess: () -> Void
-    
+
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var passcode: String = ""
     @State private var isCreatingPasscode = false
     @State private var firstPasscode: String = ""
     @State private var wrongPasscode = false
     @Environment(\.dismiss) var dismiss
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Text(promptText)
                 .font(.headline)
                 .padding()
-            
+
             SecureField("4-digit passcode", text: $passcode)
                 .keyboardType(.numberPad)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 150)
                 .multilineTextAlignment(.center)
-            
+
             if wrongPasscode {
                 Text("Incorrect passcode. Try again.").foregroundColor(.red)
             }
-            
+
             Button(buttonText) {
                 handleButtonTap()
             }
             .buttonStyle(.borderedProminent)
-            
+
         }
         .onAppear {
             if !screenTimeManager.isPasscodeSet {
@@ -2160,7 +2173,7 @@ struct PasscodeEntryView: View {
             }
         }
     }
-    
+
     private var promptText: String {
         if isCreatingPasscode && firstPasscode.isEmpty {
             return "Create a new 4-digit passcode."
@@ -2170,11 +2183,11 @@ struct PasscodeEntryView: View {
             return prompt
         }
     }
-    
+
     private var buttonText: String {
         isCreatingPasscode ? "Set Passcode" : "Unlock"
     }
-    
+
     private func handleButtonTap() {
         if isCreatingPasscode {
             if firstPasscode.isEmpty {
@@ -2182,13 +2195,18 @@ struct PasscodeEntryView: View {
                 passcode = ""
             } else {
                 if firstPasscode == passcode {
-                    screenTimeManager.setPasscode(passcode)
-                    onSuccess()
+                    // --- THIS IS THE FIX ---
+                    // Call the view model to save the new passcode.
+                    Task {
+                        await viewModel.setScreenTimePasscode(passcode: passcode)
+                        onSuccess() // Dismiss the sheet
+                    }
+                    // ------------------------
                 } else {
                     // Mismatch
+                    wrongPasscode = true
                     passcode = ""
                     firstPasscode = ""
-                    // Add shake animation or other feedback here
                 }
             }
         } else {
@@ -2203,13 +2221,14 @@ struct PasscodeEntryView: View {
 }
 
 
-// --- NEW VIEW: The Screen Time Settings ---
-// --- REPLACE your ScreenTimeSettingsView struct with this version ---
-// --- REPLACE your ScreenTimeSettingsView struct with this version ---
+// In ContentView.swift
+
+// --- Replace the entire ScreenTimeSettingsView struct ---
 struct ScreenTimeSettingsView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var isUnlocked = false
-    @State private var isShowingPasscodeView = false // Use a dedicated state to control the sheet
+    @State private var isShowingPasscodeView = false
 
     var timeOptions: [Int] {
         var options = Array(stride(from: 15, through: 120, by: 15))
@@ -2228,7 +2247,12 @@ struct ScreenTimeSettingsView: View {
                     }
                     .pickerStyle(.wheel)
                     .onChange(of: screenTimeManager.dailyLimitInMinutes) { newLimit in
-                        screenTimeManager.setDailyLimit(newLimit)
+                        // --- THIS IS THE FIX ---
+                        // Call the view model to save the new limit.
+                        Task {
+                            await viewModel.setScreenTimeLimit(minutes: newLimit)
+                        }
+                        // ------------------------
                     }
                 }
             } else {
@@ -2237,7 +2261,6 @@ struct ScreenTimeSettingsView: View {
         }
         .navigationTitle("Screen Time")
         .onAppear {
-            // If the view is not unlocked when it appears, set the state to show the sheet.
             if !isUnlocked {
                 isShowingPasscodeView = true
             }
@@ -2245,7 +2268,7 @@ struct ScreenTimeSettingsView: View {
         .sheet(isPresented: $isShowingPasscodeView) {
             PasscodeEntryView(prompt: "Enter passcode to manage settings.") {
                 isUnlocked = true
-                isShowingPasscodeView = false // Explicitly dismiss the sheet on success
+                isShowingPasscodeView = false
             }
         }
     }
