@@ -14,6 +14,7 @@ extension View {
 // Main View that controls the app's flow
 struct ContentView: View {
     @StateObject private var viewModel = AuthViewModel()
+    @Environment(\.colorScheme) var colorScheme
     
     //    @StateObject private var screenTimeManager = ScreenTimeManager()
     
@@ -77,6 +78,12 @@ struct ContentView: View {
                 RedeemingView()
             }
             // ---------------------
+        }
+        .environmentObject(viewModel)
+        // Add this new modifier to watch for changes
+        .onChange(of: colorScheme) { _ in
+            // When the theme changes, send our manual notification
+            ThemeManager.shared.themeChanged.send()
         }
     }
 }
@@ -805,7 +812,7 @@ struct SplashScreenView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 20) {
                 Image("figure.wave")
@@ -855,7 +862,7 @@ struct IntroScreenView: View {
             .padding(.horizontal, 40)
             .padding(.bottom, 30)
         }
-        .background(Color.white.edgesIgnoringSafeArea(.all))
+        .background(Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all))
     }
 }
 
@@ -867,7 +874,7 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             ScrollView {
                 VStack(spacing: 20) {
                     Image("illustration-2")
@@ -890,9 +897,9 @@ struct LoginView: View {
                     .padding(.top, 20)
                     
                     HStack {
-                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
-                        Text("OR").foregroundColor(.gray)
-                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                        Rectangle().frame(height: 1).foregroundColor(.secondary.opacity(0.3))
+                        Text("OR").foregroundColor(.secondary)
+                        Rectangle().frame(height: 1).foregroundColor(.secondary.opacity(0.3))
                     }
                     
                     GoogleSignInButton {
@@ -904,7 +911,7 @@ struct LoginView: View {
                     
                     HStack {
                         Text("Don't have an account?")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                         Button("Sign up") {
                             viewModel.appState = .signUp
                         }
@@ -933,7 +940,7 @@ struct SignUpView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             ScrollView {
                 VStack(spacing: 20) {
                     Image("illustration-3")
@@ -958,9 +965,9 @@ struct SignUpView: View {
                     .padding(.top, 30)
                     
                     HStack {
-                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
-                        Text("OR").foregroundColor(.gray)
-                        Rectangle().frame(height: 1).foregroundColor(.gray.opacity(0.3))
+                        Rectangle().frame(height: 1).foregroundColor(.secondary.opacity(0.3))
+                        Text("OR").foregroundColor(.secondary)
+                        Rectangle().frame(height: 1).foregroundColor(.secondary.opacity(0.3))
                     }
                     
                     GoogleSignInButton {
@@ -972,7 +979,7 @@ struct SignUpView: View {
                     
                     HStack {
                         Text("Already have an account?")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                         Button("Log in") {
                             viewModel.appState = .login
                         }
@@ -1000,7 +1007,7 @@ struct ToddlerProfileSetupView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             ScrollView {
                 VStack(spacing: 25) {
                     Text("Setup Toddler's Profile")
@@ -1041,6 +1048,7 @@ struct ToddlerProfileSetupView: View {
 }
 
 // Main Hub View with Bottom Tab Bar
+// --- REPLACE the MainHubView with this corrected version ---
 struct MainHubView: View {
     @State private var selectedTab: Tab = .activity
     @Namespace private var animation
@@ -1053,7 +1061,7 @@ struct MainHubView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(UIColor.systemGray6).edgesIgnoringSafeArea(.all)
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             
             TabView(selection: $selectedTab.animation(.easeInOut)) {
                 ActivitiesView(activeActivityId: $activeActivityId).tag(Tab.activity)
@@ -1071,7 +1079,8 @@ struct MainHubView: View {
             .padding(.horizontal)
             .padding(.top, 14)
             .padding(.bottom, 30)
-            .background(Color.white)
+            // --- FIX: Use an adaptive material background ---
+            .background(.regularMaterial)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
             .padding(.horizontal)
@@ -1130,7 +1139,7 @@ struct ActivityCardView: View {
             // ---------------------------------------------
         }
         .padding()
-        .background(Color.white)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
     }
@@ -1147,20 +1156,11 @@ struct ActivityCardView: View {
     
     @ViewBuilder
     private var activityImageView: some View {
-        // The conditional logic is now self-contained
-        if activityId == "shapes-in-ar" {
-            ZStack {
-                Color(UIColor.systemGray5)
-                Image(systemName: "square.on.circle")
-                    .font(.system(size: 50))
-                    .foregroundColor(.gray)
-            }
-        } else {
-            // .resizable() and .aspectRatio() are now applied only to the Image
-            Image(activityId)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-        }
+        // --- FIX: The special case for "shapes-in-ar" is now removed ---
+        // The view will now look for an image with the same name as the activity's ID.
+        Image(activityId)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
     }
 }
 
@@ -1255,6 +1255,7 @@ struct ActivitiesView: View {
                     }
                     .padding()
                 }
+                .background(Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all))
                 if screenTimeManager.isLocked {
                     TimeLockedView()
                 }
@@ -1274,7 +1275,7 @@ struct ActivitiesView: View {
 struct SettingsView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var isShowingChangePassword = false // State to control the sheet
-
+    
     var body: some View {
         NavigationView {
             Form {
@@ -1287,7 +1288,7 @@ struct SettingsView: View {
                         Text(viewModel.currentUser?.displayName ?? "")
                             .foregroundColor(.gray)
                     }
-                     HStack {
+                    HStack {
                         Image(systemName: "envelope.fill")
                         Text("Email")
                         Spacer()
@@ -1311,7 +1312,7 @@ struct SettingsView: View {
                         ScreenTimeSettingsView()
                     }
                 }
-
+                
                 // Section 4: Notifications (Restored)
                 Section(header: Text("Notifications")) {
                     Toggle(isOn: .constant(true)) {
@@ -1322,7 +1323,9 @@ struct SettingsView: View {
                 // Section 5: Sign Out (Restored)
                 Section {
                     Button(action: {
-                        viewModel.signOut()
+                        Task {
+                            await viewModel.signOut()
+                        }
                     }) {
                         Text("Sign Out")
                             .foregroundColor(.red)
@@ -1335,7 +1338,6 @@ struct SettingsView: View {
                 ChangePasswordView()
             }
         }
-        .navigationViewStyle(.stack)
     }
 }
 
@@ -1388,6 +1390,7 @@ struct ToddlerProfileView: View {
                 
                 Spacer()
             }
+            .background(Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all))
             // --- Reverted to the standard navigation bar title ---
             .navigationTitle("Toddler Profile")
             .navigationBarTitleDisplayMode(.inline)
@@ -1464,7 +1467,7 @@ struct MessageView: View {
             }
             .padding()
             .frame(width: 300)
-            .background(Color.white)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .cornerRadius(20)
             .shadow(radius: 20)
             .scaleEffect(isShowing ? 1 : 0.5)
@@ -1522,7 +1525,7 @@ struct TabBarButton: View {
 struct CategoryButton: View {
     let title: String
     let isSelected: Bool
-    let animation: Namespace.ID
+    let animation: Namespace.ID // This can now be removed if not used elsewhere, but is safe to keep
     let action: () -> Void
     
     var body: some View {
@@ -1531,19 +1534,11 @@ struct CategoryButton: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
-                .background(
-                    ZStack {
-                        if isSelected {
-                            Capsule()
-                                .fill(Color.orange)
-                                .matchedGeometryEffect(id: "category_background", in: animation)
-                        }
-                    }
-                )
-                .foregroundColor(isSelected ? .white : .black)
+            // --- FIX: Explicitly set colors for both states ---
+                .background(isSelected ? Color.orange : Color(UIColor.systemGray4))
+                .foregroundColor(isSelected ? .white : .primary)
+                .clipShape(Capsule())
         }
-        .background(Color.white)
-        .clipShape(Capsule())
         .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
     }
 }
@@ -1551,14 +1546,14 @@ struct CategoryButton: View {
 // --- Other Reusable Components (Unchanged) ---
 struct ProfileOptionButton: View {
     let title: String
-    // Remove the action from here
     var body: some View {
         Text(title)
             .font(.system(size: 20, weight: .semibold, design: .rounded))
-            .foregroundColor(.black)
+        // --- FIX: Use an adaptive text color ---
+            .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.white)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .cornerRadius(15)
             .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
     }
@@ -1631,7 +1626,7 @@ struct IntroPage: View {
             
             Text(description)
                 .font(.system(size: 18, weight: .medium, design: .rounded))
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
@@ -1644,53 +1639,63 @@ struct IntroPage: View {
 // --- NEW SCREEN 1: Toddler's Progress ---
 struct ProgressScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-
+    @Environment(\.colorScheme) var colorScheme
+    @State private var redrawTrigger = false
+    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if let profile = viewModel.currentToddlerProfile {
-                    
-                    // --- ADDED Name and Image ---
-                    Text(profile.name)
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                    
-                    Image(profile.avatarImageName)
-                        .resizable()
-                        .frame(width: 150, height: 150)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.orange, lineWidth: 3))
-                        .shadow(radius: 7)
-                        .padding(.bottom)
-
-                    // --- Current Level Display ---
-                    Text("Current Level: \(profile.level)")
-                        .font(.title2.weight(.semibold))
-                        .padding(.bottom)
-
-                    // --- Progress Bars ---
-                    ProgressRow(
-                        title: "Cognitive Skills",
-                        progress: profile.cognitiveSkillsProgress,
-                        color: .blue
-                    )
-                    ProgressRow(
-                        title: "Color Perception",
-                        progress: profile.colorPerceptionProgress,
-                        color: .purple
-                    )
-                    ProgressRow(
-                        title: "Observation Skills",
-                        progress: profile.observationSkillsProgress,
-                        color: .orange
-                    )
-                } else {
-                    Text("No profile data available.")
+        ZStack{
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    if let profile = viewModel.currentToddlerProfile {
+                        
+                        // --- ADDED Name and Image ---
+                        Text(profile.name)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                        
+                        Image(profile.avatarImageName)
+                            .resizable()
+                            .frame(width: 150, height: 150)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.orange, lineWidth: 3))
+                            .shadow(radius: 7)
+                            .padding(.bottom)
+                        
+                        // --- Current Level Display ---
+                        Text("Current Level: \(profile.level)")
+                            .font(.title2.weight(.semibold))
+                            .padding(.bottom)
+                        
+                        // --- Progress Bars ---
+                        ProgressRow(
+                            title: "Cognitive Skills",
+                            progress: profile.cognitiveSkillsProgress,
+                            color: .blue
+                        )
+                        ProgressRow(
+                            title: "Color Perception",
+                            progress: profile.colorPerceptionProgress,
+                            color: .purple
+                        )
+                        ProgressRow(
+                            title: "Observation Skills",
+                            progress: profile.observationSkillsProgress,
+                            color: .orange
+                        )
+                    } else {
+                        Text("No profile data available.")
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Toddler's Progress")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(ThemeManager.shared.themeChanged) {
+            self.redrawTrigger.toggle()
+        }
+        .id(redrawTrigger)
     }
 }
 
@@ -1726,6 +1731,9 @@ struct ProgressRow: View {
 struct RecentActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var selectedFilter: ActivityFilter = .allTime
+    @State private var redrawTrigger = false
+    
+    @Environment(\.colorScheme) var colorScheme
     
     // A computed property that generates the date filter buttons
     private var dateFilters: [ActivityFilter] {
@@ -1759,46 +1767,54 @@ struct RecentActivitiesView: View {
     let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Horizontal scrolling filter bar
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(dateFilters) { filter in
-                        FilterButton(filter: filter, isSelected: selectedFilter == filter) {
-                            self.selectedFilter = filter
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-            }
-            .background(Color(UIColor.systemGray6))
+        ZStack{
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             
-            // Grid of activity cards
-            ScrollView {
-                if aggregatedRecords.isEmpty {
-                    ContentUnavailableView(
-                        "No Activities Recorded",
-                        systemImage: "clock.badge.xmark",
-                        description: Text("Complete some activities to see your history here.")
-                    )
-                    .padding(.top, 50)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(aggregatedRecords) { record in
-                            ActivityCardView(
-                                activityId: record.id,
-                                activityName: record.name,
-                                duration: record.totalDuration
-                            )
+            VStack(spacing: 0) {
+                // Horizontal scrolling filter bar
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(dateFilters) { filter in
+                            FilterButton(filter: filter, isSelected: selectedFilter == filter) {
+                                self.selectedFilter = filter
+                            }
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                }
+                .background(Color(UIColor.systemGray6))
+                
+                // Grid of activity cards
+                ScrollView {
+                    if aggregatedRecords.isEmpty {
+                        ContentUnavailableView(
+                            "No Activities Recorded",
+                            systemImage: "clock.badge.xmark",
+                            description: Text("Complete some activities to see your history here.")
+                        )
+                        .padding(.top, 50)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(aggregatedRecords) { record in
+                                ActivityCardView(
+                                    activityId: record.id,
+                                    activityName: record.name,
+                                    duration: record.totalDuration
+                                )
+                            }
+                        }
+                        .padding()
+                    }
                 }
             }
         }
         .navigationTitle("Recent Activities")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(ThemeManager.shared.themeChanged) {
+            self.redrawTrigger.toggle()
+        }
+        .id(redrawTrigger)
         // No need to call fetch here anymore, it's handled at app launch
     }
 }
@@ -1838,34 +1854,40 @@ struct FilterButton: View {
 // --- REPLACE the RewardsScreenView struct with this final version ---
 struct RewardsScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
+    @Environment(\.colorScheme) var colorScheme
+    @State private var redrawTrigger = false
     
     @State private var selectedRewardForConfirmation: Reward?
     
     let columns = [GridItem(.flexible())]
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if let profile = viewModel.currentToddlerProfile {
-                    ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
-                        RewardCardView(
-                            reward: reward,
-                            
-                            // --- FINAL, CORRECTED UNLOCK LOGIC ---
-                            // This now checks the level progress within the current 5-reward cycle.
-                            isUnlocked: (profile.level % viewModel.allRewards.count) > index,
-                            
-                            isRedeemed: profile.redeemedRewardIDs.contains(reward.id),
-                            onRedeem: {
-                                self.selectedRewardForConfirmation = reward
-                            }
-                        )
+        ZStack{
+            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    if let profile = viewModel.currentToddlerProfile {
+                        ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
+                            RewardCardView(
+                                reward: reward,
+                                
+                                // --- FINAL, CORRECTED UNLOCK LOGIC ---
+                                // This now checks the level progress within the current 5-reward cycle.
+                                isUnlocked: (profile.level % viewModel.allRewards.count) > index,
+                                
+                                isRedeemed: profile.redeemedRewardIDs.contains(reward.id),
+                                onRedeem: {
+                                    self.selectedRewardForConfirmation = reward
+                                }
+                            )
+                        }
                     }
+                    
+                    Spacer(minLength: 100)
                 }
-                
-                Spacer(minLength: 100)
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Rewards")
         .sheet(item: $selectedRewardForConfirmation) { reward in
@@ -1873,6 +1895,10 @@ struct RewardsScreenView: View {
                 .environmentObject(viewModel)
                 .presentationDetents([.height(400)])
         }
+        .onReceive(ThemeManager.shared.themeChanged) {
+            self.redrawTrigger.toggle()
+        }
+        .id(redrawTrigger)
     }
 }
 
@@ -1931,7 +1957,7 @@ struct RewardCardView: View {
                 .padding([.horizontal, .bottom])
             }
         }
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
             // The overlay is now only for the lock icon
@@ -2052,18 +2078,23 @@ struct RedeemingView: View {
     }
 }
 
-// --- NEW VIEW: The Time Lockout Overlay ---
+// In ContentView.swift
+
+// --- Replace the entire TimeLockedView struct ---
 struct TimeLockedView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var isShowingPasscodeEntry = false
-    
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
-            
+
             VStack(spacing: 20) {
-                Text("⏳")
+                // --- THIS IS THE FIX ---
+                Text("⌛")
                     .font(.system(size: 80))
+                // -----------------------
                 Text("Whoops, slow down!")
                     .font(.largeTitle).bold()
                     .foregroundColor(.white)
@@ -2071,7 +2102,7 @@ struct TimeLockedView: View {
                     .font(.body)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
-                
+
                 Button("15 more minutes, please?") {
                     isShowingPasscodeEntry = true
                 }
@@ -2085,8 +2116,13 @@ struct TimeLockedView: View {
             PasscodeEntryView(
                 prompt: "Enter passcode to get 15 more minutes.",
                 onSuccess: {
-                    screenTimeManager.grantExtension()
-                    isShowingPasscodeEntry = false
+                    // --- THIS IS THE FIX ---
+                    // Call the view model to grant and save the extension.
+                    Task {
+                        await viewModel.grantScreenTimeExtension()
+                        isShowingPasscodeEntry = false
+                    }
+                    // ------------------------
                 }
             )
         }
@@ -2094,39 +2130,42 @@ struct TimeLockedView: View {
 }
 
 
-// --- NEW VIEW: Reusable Passcode Entry ---
+// In ContentView.swift
+
+// --- Replace the entire PasscodeEntryView struct ---
 struct PasscodeEntryView: View {
     let prompt: String
     let onSuccess: () -> Void
-    
+
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var passcode: String = ""
     @State private var isCreatingPasscode = false
     @State private var firstPasscode: String = ""
     @State private var wrongPasscode = false
     @Environment(\.dismiss) var dismiss
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Text(promptText)
                 .font(.headline)
                 .padding()
-            
+
             SecureField("4-digit passcode", text: $passcode)
                 .keyboardType(.numberPad)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 150)
                 .multilineTextAlignment(.center)
-            
+
             if wrongPasscode {
                 Text("Incorrect passcode. Try again.").foregroundColor(.red)
             }
-            
+
             Button(buttonText) {
                 handleButtonTap()
             }
             .buttonStyle(.borderedProminent)
-            
+
         }
         .onAppear {
             if !screenTimeManager.isPasscodeSet {
@@ -2134,7 +2173,7 @@ struct PasscodeEntryView: View {
             }
         }
     }
-    
+
     private var promptText: String {
         if isCreatingPasscode && firstPasscode.isEmpty {
             return "Create a new 4-digit passcode."
@@ -2144,11 +2183,11 @@ struct PasscodeEntryView: View {
             return prompt
         }
     }
-    
+
     private var buttonText: String {
         isCreatingPasscode ? "Set Passcode" : "Unlock"
     }
-    
+
     private func handleButtonTap() {
         if isCreatingPasscode {
             if firstPasscode.isEmpty {
@@ -2156,13 +2195,18 @@ struct PasscodeEntryView: View {
                 passcode = ""
             } else {
                 if firstPasscode == passcode {
-                    screenTimeManager.setPasscode(passcode)
-                    onSuccess()
+                    // --- THIS IS THE FIX ---
+                    // Call the view model to save the new passcode.
+                    Task {
+                        await viewModel.setScreenTimePasscode(passcode: passcode)
+                        onSuccess() // Dismiss the sheet
+                    }
+                    // ------------------------
                 } else {
                     // Mismatch
+                    wrongPasscode = true
                     passcode = ""
                     firstPasscode = ""
-                    // Add shake animation or other feedback here
                 }
             }
         } else {
@@ -2177,23 +2221,21 @@ struct PasscodeEntryView: View {
 }
 
 
-// --- NEW VIEW: The Screen Time Settings ---
-// --- REPLACE your ScreenTimeSettingsView struct with this version ---
+// In ContentView.swift
+
+// --- Replace the entire ScreenTimeSettingsView struct ---
 struct ScreenTimeSettingsView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
+    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
     @State private var isUnlocked = false
-    
-    // We've changed this from a constant 'let' to a computed 'var'
-    // to allow for more complex creation.
+    @State private var isShowingPasscodeView = false
+
     var timeOptions: [Int] {
-        // Start with the original options
         var options = Array(stride(from: 15, through: 120, by: 15))
-        // Add our new 2-minute option for testing
         options.append(2)
-        // Sort the array so the options appear in the correct order in the picker
         return options.sorted()
     }
-    
+
     var body: some View {
         Form {
             if isUnlocked {
@@ -2205,7 +2247,12 @@ struct ScreenTimeSettingsView: View {
                     }
                     .pickerStyle(.wheel)
                     .onChange(of: screenTimeManager.dailyLimitInMinutes) { newLimit in
-                        screenTimeManager.setDailyLimit(newLimit)
+                        // --- THIS IS THE FIX ---
+                        // Call the view model to save the new limit.
+                        Task {
+                            await viewModel.setScreenTimeLimit(minutes: newLimit)
+                        }
+                        // ------------------------
                     }
                 }
             } else {
@@ -2213,9 +2260,15 @@ struct ScreenTimeSettingsView: View {
             }
         }
         .navigationTitle("Screen Time")
-        .sheet(isPresented: $isUnlocked.not) {
+        .onAppear {
+            if !isUnlocked {
+                isShowingPasscodeView = true
+            }
+        }
+        .sheet(isPresented: $isShowingPasscodeView) {
             PasscodeEntryView(prompt: "Enter passcode to manage settings.") {
                 isUnlocked = true
+                isShowingPasscodeView = false
             }
         }
     }
@@ -2251,7 +2304,7 @@ struct SplashLoadingBarView: View {
     
     // We'll use a timer to drive the animation
     @State private var timer: Timer?
-
+    
     var body: some View {
         VStack {
             Spacer()
@@ -2306,7 +2359,7 @@ struct UpdateToddlerProfileView: View {
         _toddlerName = State(initialValue: profile.name)
         _toddlerAge = State(initialValue: profile.age)
     }
-
+    
     var body: some View {
         NavigationView {
             Form {
@@ -2399,14 +2452,14 @@ struct ChangePasswordView: View {
 }
 
 // Helper binding extension for the sheet
-extension Binding where Value == Bool {
-    var not: Binding<Bool> {
-        Binding<Bool>(
-            get: { !self.wrappedValue },
-            set: { self.wrappedValue = !$0 }
-        )
-    }
-}
+//extension Binding where Value == Bool {
+//    var not: Binding<Bool> {
+//        Binding<Bool>(
+//            get: { !self.wrappedValue },
+//            set: { self.wrappedValue = !$0 }
+//        )
+//    }
+//}
 
 #Preview {
     ContentView()

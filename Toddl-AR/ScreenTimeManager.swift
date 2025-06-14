@@ -3,106 +3,97 @@
 import Foundation
 import Combine
 
-// NOTE: For a real app, you MUST use the Keychain to securely store the passcode.
-fileprivate func savePasscodeToKeychain(_ passcode: String) {
-    UserDefaults.standard.set(passcode, forKey: "screenTimePasscode")
-}
-
-fileprivate func getPasscodeFromKeychain() -> String? {
-    UserDefaults.standard.string(forKey: "screenTimePasscode")
-}
-
 @MainActor
 class ScreenTimeManager: ObservableObject {
     static let shared = ScreenTimeManager()
     
-    private static let dailyLimitKey = "dailyLimitInMinutes"
-    private static let dailyUsageKey = "dailyScreenTimeUsage"
-    private static let extensionKey = "dailyExtensionGranted"
-    
-    @Published var dailyLimitInMinutes: Int
-    @Published private(set) var timeSpentToday: TimeInterval
+    // --- Published properties for the UI to observe ---
+    @Published var dailyLimitInMinutes: Int = 60
+    @Published private(set) var timeSpentToday: TimeInterval = 0
     @Published private(set) var isLocked: Bool = false
+    @Published var isPasscodeSet: Bool = false
     
-    private var hasGrantedExtensionToday: Bool
-
-    private init() {
-        let savedLimit = UserDefaults.standard.integer(forKey: Self.dailyLimitKey)
-        let initialLimit = savedLimit == 0 ? 60 : savedLimit
-        
-        let (usage, hasExtension) = Self.loadTodaysUsage()
-
-        self.dailyLimitInMinutes = initialLimit
-        self.timeSpentToday = usage
-        self.hasGrantedExtensionToday = hasExtension
-        
-        checkLockStatus()
-    }
+    // --- Internal state properties ---
+    private var passcode: String?
+    private var hasGrantedExtensionToday: Bool = false
     
-    func setDailyLimit(_ minutes: Int) {
-        dailyLimitInMinutes = minutes
-        UserDefaults.standard.set(minutes, forKey: Self.dailyLimitKey)
-        checkLockStatus()
-    }
+    private init() {}
     
-    func addSession(duration: TimeInterval) {
-        timeSpentToday += duration
-        Self.saveTodaysUsage(usage: timeSpentToday, hasExtension: hasGrantedExtensionToday)
-        checkLockStatus()
-    }
-
-    func grantExtension() {
-        hasGrantedExtensionToday = true
-        Self.saveTodaysUsage(usage: timeSpentToday, hasExtension: true)
-        checkLockStatus()
-    }
-
-    func checkPasscode(_ passcode: String) -> Bool {
-        return getPasscodeFromKeychain() == passcode
-    }
-
-    func setPasscode(_ passcode: String) {
-        savePasscodeToKeychain(passcode)
-    }
-
-    var isPasscodeSet: Bool {
-        return getPasscodeFromKeychain() != nil
-    }
-
-    private func checkLockStatus() {
-        let limitInSeconds = TimeInterval(dailyLimitInMinutes * 60)
-        var effectiveLimit = limitInSeconds
-
-        if hasGrantedExtensionToday {
-            effectiveLimit += 15 * 60
-        }
-        
-        isLocked = timeSpentToday >= effectiveLimit
-    }
-    
+    // --- Helper to get today's date as a string ---
     private static var todayDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }
 
-    private static func loadTodaysUsage() -> (usage: TimeInterval, hasExtension: Bool) {
-        guard let usageData = UserDefaults.standard.dictionary(forKey: dailyUsageKey) as? [String: TimeInterval],
-              let usage = usageData[todayDateString] else {
-            return (0, false)
+    /// Configures the manager with the loaded profile. Resets daily usage if it's a new day.
+    func configure(with profile: ToddlerProfile) {
+        self.dailyLimitInMinutes = profile.dailyLimitInMinutes
+        self.passcode = profile.screenTimePasscode
+        self.isPasscodeSet = profile.screenTimePasscode != nil
+
+        // Check if the last usage was today. If not, reset the daily timer.
+        if profile.lastUsageDate == Self.todayDateString {
+            self.timeSpentToday = profile.timeSpentToday
+            self.hasGrantedExtensionToday = profile.hasGrantedExtensionToday
+        } else {
+            self.timeSpentToday = 0
+            self.hasGrantedExtensionToday = false
         }
         
-        let extensionData = UserDefaults.standard.dictionary(forKey: extensionKey) as? [String: Bool]
-        let hasExtension = extensionData?[todayDateString] ?? false
-        
-        return (usage, hasExtension)
+        checkLockStatus()
+    }
+
+    /// Resets the manager to its default state on logout.
+    func reset() {
+        self.dailyLimitInMinutes = 60
+        self.timeSpentToday = 0
+        self.isLocked = false
+        self.passcode = nil
+        self.isPasscodeSet = false
+        self.hasGrantedExtensionToday = false
     }
     
-    private static func saveTodaysUsage(usage: TimeInterval, hasExtension: Bool) {
-        let newUsageData = [todayDateString: usage]
-        let newExtensionData = [todayDateString: hasExtension]
+    /// Returns the latest screen time data to be saved to the database.
+    func getCurrentDataForSave() -> (passcode: String?, limit: Int, usage: TimeInterval, hasExtension: Bool, date: String) {
+        return (self.passcode, self.dailyLimitInMinutes, self.timeSpentToday, self.hasGrantedExtensionToday, Self.todayDateString)
+    }
+
+    // MARK: - In-Memory State Modifiers
+
+    func setDailyLimit(_ minutes: Int) {
+        dailyLimitInMinutes = minutes
+        checkLockStatus()
+    }
+    
+    func addSession(duration: TimeInterval) {
+        timeSpentToday += duration
+        checkLockStatus()
+    }
+
+    func grantExtension() {
+        hasGrantedExtensionToday = true
+        checkLockStatus()
+    }
+
+    func checkPasscode(_ passcode: String) -> Bool {
+        return self.passcode == passcode
+    }
+
+    func setPasscode(_ passcode: String) {
+        self.passcode = passcode
+        self.isPasscodeSet = true
+    }
+
+    /// Checks if the time spent has exceeded the allowed limit.
+    private func checkLockStatus() {
+        let limitInSeconds = TimeInterval(dailyLimitInMinutes * 60)
+        var effectiveLimit = limitInSeconds
+
+        if hasGrantedExtensionToday {
+            effectiveLimit += 15 * 60 // 15 minute extension
+        }
         
-        UserDefaults.standard.set(newUsageData, forKey: dailyUsageKey)
-        UserDefaults.standard.set(newExtensionData, forKey: extensionKey)
+        isLocked = timeSpentToday >= effectiveLimit
     }
 }
