@@ -1,3 +1,4 @@
+// Toddl-AR/ContentView.swift
 import SwiftUI
 import RealityKit
 import Combine
@@ -1093,6 +1094,8 @@ struct MainHubView: View {
                 NumbersARView(activeActivityId: $activeActivityId)
             } else if activity.id == "shapes-in-ar" {
                 ShapesARView(activeActivityId: $activeActivityId)
+            } else if activity.id == "ar-doodling" {
+                ARDoodleView(activeActivityId: $activeActivityId)
             }
         }
     }
@@ -1182,13 +1185,14 @@ struct ActivitiesView: View {
     @Namespace private var categoryAnimation
     
     // New category list
-    let categories = ["All", "Cognitive", "Color", "Observation"]
+    let categories = ["All", "Cognitive", "Color", "Observation", "Creative"]
     
     // New structured list of all activities with their categories
     let allActivities: [Activity] = [
         .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
         .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
-        .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"])
+        .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"]),
+        .init(id: "ar-doodling", name: "AR Doodling", categories: ["Creative"])
     ]
     
     // This computed property automatically filters the activities based on state
@@ -1306,6 +1310,13 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                 }
                 
+                Section(header: Text("Toddler Profiles")) {
+                    Button("Add another toddler profile") {
+                        viewModel.appState = .toddlerProfileSetup
+                    }
+                    .foregroundColor(.primary)
+                }
+                
                 // Section 3: New "Health" section
                 Section(header: Text("Health")) {
                     NavigationLink("Screen Time Settings") {
@@ -1342,60 +1353,77 @@ struct SettingsView: View {
 }
 
 
-// Toddler Profile View
-// --- REPLACE the ToddlerProfileView with this new version for correct alignment ---
-// --- REPLACE the ToddlerProfileView with this new version ---
 struct ToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var isShowingUpdateSheet = false
     
     var body: some View {
         NavigationView {
-            // This VStack with Spacers will center the main content
             VStack {
-                Spacer()
-                
-                VStack(spacing: 25) {
-                    Image(viewModel.currentToddlerProfile?.avatarImageName ?? "toddler1")
-                        .resizable()
-                        .frame(width: 190, height: 190, alignment: .top)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.orange, lineWidth: 4))
-                        .shadow(radius: 10)
-                        .padding(.bottom)
-                    
-                    Text(viewModel.currentToddlerProfile?.name ?? "Toddler")
-                        .font(.title.bold())
-                    
-                    VStack(spacing: 15) {
-                        NavigationLink(destination: RecentActivitiesView()) {
-                            ProfileOptionButton(title: "Activities")
-                        }
-                        NavigationLink(destination: ProgressScreenView()) {
-                            ProfileOptionButton(title: "Progress")
-                        }
-                        NavigationLink(destination: RewardsScreenView()) {
-                            ProfileOptionButton(title: "Rewards")
-                        }
-                        // The Edit Profile button remains here
-                        Button {
-                            isShowingUpdateSheet = true
-                        } label: {
-                            ProfileOptionButton(title: "Edit Profile")
+                if viewModel.toddlerProfiles.count > 1 {
+                    Picker("Select Profile", selection: Binding(get: {
+                        viewModel.selectedToddlerProfile
+                    }, set: { newProfile in
+                        viewModel.switchToddlerProfile(to: newProfile)
+                    })) {
+                        ForEach(viewModel.toddlerProfiles) { profile in
+                            Text(profile.name).tag(profile as ToddlerProfile?)
                         }
                     }
-                    .padding(.top, 20)
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding()
                 }
-                .padding(.horizontal, 30)
                 
-                Spacer()
+                if let profile = viewModel.selectedToddlerProfile {
+                    VStack(spacing: 25) {
+                        Image(profile.avatarImageName)
+                            .resizable()
+                            .frame(width: 190, height: 190, alignment: .top)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.orange, lineWidth: 4))
+                            .shadow(radius: 10)
+                            .padding(.bottom)
+                        
+                        Text(profile.name)
+                            .font(.title.bold())
+                        
+                        VStack(spacing: 15) {
+                            NavigationLink(destination: RecentActivitiesView()) {
+                                ProfileOptionButton(title: "Activities")
+                            }
+                            NavigationLink(destination: ProgressScreenView()) {
+                                ProfileOptionButton(title: "Progress")
+                            }
+                            NavigationLink(destination: RewardsScreenView()) {
+                                ProfileOptionButton(title: "Rewards")
+                            }
+                            Button {
+                                isShowingUpdateSheet = true
+                            } label: {
+                                ProfileOptionButton(title: "Edit Profile")
+                            }
+                        }
+                        .padding(.top, 20)
+                    }
+                    .padding(.horizontal, 30)
+                    
+                    Spacer()
+                } else {
+                    VStack {
+                        Text("No Toddler Profile Found")
+                            .font(.headline)
+                        Button("Create a Profile") {
+                            viewModel.appState = .toddlerProfileSetup
+                        }
+                        .padding()
+                    }
+                }
             }
             .background(Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all))
-            // --- Reverted to the standard navigation bar title ---
             .navigationTitle("Toddler Profile")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isShowingUpdateSheet) {
-                if let profile = viewModel.currentToddlerProfile {
+                if let profile = viewModel.selectedToddlerProfile {
                     UpdateToddlerProfileView(profile: profile)
                 }
             }
@@ -1648,7 +1676,7 @@ struct ProgressScreenView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    if let profile = viewModel.currentToddlerProfile {
+                    if let profile = viewModel.selectedToddlerProfile {
                         
                         // --- ADDED Name and Image ---
                         Text(profile.name)
@@ -1737,10 +1765,19 @@ struct RecentActivitiesView: View {
     
     // A computed property that generates the date filter buttons
     private var dateFilters: [ActivityFilter] {
+        var uniqueDates: [Date] = []
+        for record in viewModel.activityHistory {
+            let date = Calendar.current.startOfDay(for: record.dateCompleted)
+            if !uniqueDates.contains(date) {
+                uniqueDates.append(date)
+            }
+        }
+        
+        let sortedDates = uniqueDates.sorted(by: >)
+        
         var filters: [ActivityFilter] = [.allTime]
-        let uniqueDates = Set(viewModel.activityHistory.map { Calendar.current.startOfDay(for: $0.dateCompleted) })
-        let recentUniqueDates = Array(uniqueDates).sorted(by: >).prefix(7)
-        filters.append(contentsOf: recentUniqueDates.map { .date($0) })
+        filters.append(contentsOf: sortedDates.prefix(7).map { .date($0) })
+        
         return filters
     }
     
@@ -1867,7 +1904,7 @@ struct RewardsScreenView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    if let profile = viewModel.currentToddlerProfile {
+                    if let profile = viewModel.selectedToddlerProfile {
                         ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
                             RewardCardView(
                                 reward: reward,
@@ -2345,7 +2382,6 @@ struct SplashLoadingBarView: View {
     }
 }
 
-// --- NEW SCREEN for updating the profile ---
 struct UpdateToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
@@ -2353,6 +2389,8 @@ struct UpdateToddlerProfileView: View {
     // State to hold the edited values
     @State private var toddlerName: String
     @State private var toddlerAge: String
+    
+    @State private var isShowingDeleteConfirmation = false
     
     // The initializer pre-fills the state with the current profile's data
     init(profile: ToddlerProfile) {
@@ -2368,6 +2406,12 @@ struct UpdateToddlerProfileView: View {
                     TextField("Age", text: $toddlerAge)
                         .keyboardType(.numberPad)
                 }
+                
+                Section {
+                    Button("Delete Profile", role: .destructive) {
+                        isShowingDeleteConfirmation = true
+                    }
+                }
             }
             .navigationTitle("Update Profile")
             .navigationBarTitleDisplayMode(.inline)
@@ -2382,9 +2426,19 @@ struct UpdateToddlerProfileView: View {
                             dismiss()
                         }
                     }
-                    // Disable the save button if the name is empty
                     .disabled(toddlerName.isEmpty)
                 }
+            }
+            .alert("Are you sure you want to delete this profile?", isPresented: $isShowingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    Task {
+                        if let profile = viewModel.selectedToddlerProfile {
+                            await viewModel.deleteToddlerProfile(profile: profile)
+                        }
+                        dismiss()
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
             }
         }
     }
