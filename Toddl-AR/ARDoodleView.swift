@@ -20,6 +20,7 @@ struct ARDoodleView: View {
                 
                 HStack {
                     Button("Clear") {
+                        Haptics.shared.impact(.medium)
                         clearDoodles.toggle()
                     }
                     .font(.headline)
@@ -29,6 +30,7 @@ struct ARDoodleView: View {
                     .cornerRadius(15)
 
                     Button("Finish") {
+                        Haptics.shared.impact(.medium)
                         let duration = Date().timeIntervalSince(startTime)
                         Task {
                             await viewModel.updateProgressAndHistory(
@@ -96,9 +98,11 @@ struct ARDoodleViewContainer: UIViewRepresentable {
 
             switch gesture.state {
             case .began:
+                Haptics.shared.impact(.light)
                 lastPanLocation = panLocation
                 strokeColor = .random
             case .changed:
+                Haptics.shared.selectionChanged()
                 if let lastPanLocation = self.lastPanLocation {
                     let points = stride(from: 0, to: 1, by: 0.1).map {
                         let interpolatedPoint = CGPoint(

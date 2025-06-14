@@ -130,6 +130,7 @@ struct NumbersARView: View {
                     HStack(spacing: 20) {
                         // Updated "Finish" button
                         Button("Finish") {
+                            Haptics.shared.impact(.medium)
                             finishActivity()
                         }
                         .font(.headline)
@@ -140,6 +141,7 @@ struct NumbersARView: View {
                         
                         // Updated "Next/Done!" button
                         Button(action: {
+                            Haptics.shared.impact(.light)
                             if currentIndex < challenges.count - 1 {
                                 currentIndex += 1
                                 isSolved = false
@@ -336,8 +338,7 @@ struct NumbersARViewContainer: UIViewRepresentable {
             }
             
             if countInZone != self.previousCountInZone {
-                self.hapticGenerator.prepare()
-                self.hapticGenerator.impactOccurred()
+                Haptics.shared.impact(.medium)
                 self.previousCountInZone = countInZone
             }
             
@@ -429,14 +430,16 @@ struct ShapesARView: View {
                 Spacer()
                 
                 HStack(spacing: 20) {
-                    Button(action: { if currentIndex > 0 { currentIndex -= 1 } }) {
+                    Button(action: {
+                        Haptics.shared.impact(.light)
+                        if currentIndex > 0 { currentIndex -= 1 }
+                    }) {
                         Image(systemName: "arrow.left")
                     }.modifier(NavButtonModifier())
                     
                     Button("Finish") {
+                        Haptics.shared.impact(.medium)
                         let duration = Date().timeIntervalSince(startTime)
-                        // This assumes the user "completes" the activity by finishing.
-                        // We pass the total number of steps and how many were viewed.
                         Task {
                             await viewModel.updateProgressAndHistory(
                                 activityId: "shapes-in-ar",
@@ -444,9 +447,7 @@ struct ShapesARView: View {
                                 totalSteps: shapeData.count,
                                 stepsCompleted: currentIndex + 1,
                                 duration: duration,
-                                //                                screenTimeManager: screenTimeManager
                             )
-                            // Now dismiss the view
                             activeActivityId = nil
                         }
                     }
@@ -456,7 +457,10 @@ struct ShapesARView: View {
                     .foregroundColor(.white)
                     .cornerRadius(15)
                     
-                    Button(action: { if currentIndex < shapeData.count - 1 { currentIndex += 1 } }) {
+                    Button(action: {
+                        Haptics.shared.impact(.light)
+                        if currentIndex < shapeData.count - 1 { currentIndex += 1 }
+                    }) {
                         Image(systemName: "arrow.right")
                     }.modifier(NavButtonModifier(disabled: currentIndex >= shapeData.count - 1))
                 }
@@ -1364,6 +1368,7 @@ struct ToddlerProfileView: View {
                     Picker("Select Profile", selection: Binding(get: {
                         viewModel.selectedToddlerProfile
                     }, set: { newProfile in
+                        Haptics.shared.selectionChanged()
                         viewModel.switchToddlerProfile(to: newProfile)
                     })) {
                         ForEach(viewModel.toddlerProfiles) { profile in
@@ -1501,6 +1506,7 @@ struct MessageView: View {
             .scaleEffect(isShowing ? 1 : 0.5)
             .opacity(isShowing ? 1 : 0)
             .onAppear {
+                Haptics.shared.notification(isError ? .error : .success)
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                     isShowing = true
                 }
@@ -1624,7 +1630,10 @@ struct PrimaryButton: View {
     var title: String
     var action: () -> Void
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            Haptics.shared.impact(.medium)
+            action()
+        }) {
             Text(title)
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
@@ -2048,6 +2057,7 @@ struct LevelUpView: View {
             .scaleEffect(isShowing ? 1 : 0.5)
             .opacity(isShowing ? 1 : 0)
             .onAppear {
+                Haptics.shared.notification(.success)
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     isShowing = true
                 }
