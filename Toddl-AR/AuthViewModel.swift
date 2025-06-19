@@ -1,13 +1,11 @@
-// Toddl-AR/AuthViewModel.swift
-
 import SwiftUI
 import Firebase
 import FirebaseFirestore
 import FirebaseAuth
 import Combine
 import GoogleSignIn
+import FirebaseAI
 
-// MARK: - App State and Data Models
 enum AppState {
     case splash, intro, login, signUp, toddlerProfileSetup, mainHub
 }
@@ -18,28 +16,23 @@ struct ToddlerProfile: Identifiable, Codable, Hashable {
     var age: String
     let avatarImageName: String
     
-    // Existing Properties
     var cognitiveSkillsProgress: Double
     var colorPerceptionProgress: Double
     var observationSkillsProgress: Double
     var level: Int
     var redeemedRewardIDs: [String]
-    
-    // --- NEW --- Screen Time Properties
+
     var screenTimePasscode: String?
     var dailyLimitInMinutes: Int
     var timeSpentToday: TimeInterval
     var hasGrantedExtensionToday: Bool
-    var lastUsageDate: String // To track the day of the last usage
+    var lastUsageDate: String
     
-    // CodingKeys to map properties to Firestore fields
     enum CodingKeys: String, CodingKey {
         case id, name, age, avatarImageName, cognitiveSkillsProgress, colorPerceptionProgress, observationSkillsProgress, level, redeemedRewardIDs
-        // --- NEW ---
         case screenTimePasscode, dailyLimitInMinutes, timeSpentToday, hasGrantedExtensionToday, lastUsageDate
     }
-    
-    // Custom decoder with default values for backward compatibility
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -47,54 +40,52 @@ struct ToddlerProfile: Identifiable, Codable, Hashable {
         name = try container.decode(String.self, forKey: .name)
         age = try container.decode(String.self, forKey: .age)
         avatarImageName = try container.decode(String.self, forKey: .avatarImageName)
+        
         cognitiveSkillsProgress = try container.decodeIfPresent(Double.self, forKey: .cognitiveSkillsProgress) ?? 0.0
         colorPerceptionProgress = try container.decodeIfPresent(Double.self, forKey: .colorPerceptionProgress) ?? 0.0
         observationSkillsProgress = try container.decodeIfPresent(Double.self, forKey: .observationSkillsProgress) ?? 0.0
         level = try container.decodeIfPresent(Int.self, forKey: .level) ?? 0
         redeemedRewardIDs = try container.decodeIfPresent([String].self, forKey: .redeemedRewardIDs) ?? []
-        
-        // --- NEW --- Decode new properties with sensible defaults
+
         screenTimePasscode = try container.decodeIfPresent(String.self, forKey: .screenTimePasscode)
         dailyLimitInMinutes = try container.decodeIfPresent(Int.self, forKey: .dailyLimitInMinutes) ?? 60
         timeSpentToday = try container.decodeIfPresent(TimeInterval.self, forKey: .timeSpentToday) ?? 0.0
         hasGrantedExtensionToday = try container.decodeIfPresent(Bool.self, forKey: .hasGrantedExtensionToday) ?? false
         lastUsageDate = try container.decodeIfPresent(String.self, forKey: .lastUsageDate) ?? ""
     }
-    
-    // Custom encoder to save all properties
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(age, forKey: .age)
         try container.encode(avatarImageName, forKey: .avatarImageName)
+        
         try container.encode(cognitiveSkillsProgress, forKey: .cognitiveSkillsProgress)
         try container.encode(colorPerceptionProgress, forKey: .colorPerceptionProgress)
         try container.encode(observationSkillsProgress, forKey: .observationSkillsProgress)
         try container.encode(level, forKey: .level)
         try container.encode(redeemedRewardIDs, forKey: .redeemedRewardIDs)
-        
-        // --- NEW --- Encode new properties
+
         try container.encodeIfPresent(screenTimePasscode, forKey: .screenTimePasscode)
         try container.encode(dailyLimitInMinutes, forKey: .dailyLimitInMinutes)
         try container.encode(timeSpentToday, forKey: .timeSpentToday)
         try container.encode(hasGrantedExtensionToday, forKey: .hasGrantedExtensionToday)
         try container.encode(lastUsageDate, forKey: .lastUsageDate)
     }
-    
-    // Default initializer for creating brand new profiles
+
     init(id: String? = nil, name: String, age: String, avatarImageName: String) {
         self.id = id
         self.name = name
         self.age = age
         self.avatarImageName = avatarImageName
+        
         self.cognitiveSkillsProgress = 0.0
         self.colorPerceptionProgress = 0.0
         self.observationSkillsProgress = 0.0
         self.level = 0
         self.redeemedRewardIDs = []
-        
-        // --- NEW --- Initialize screen time properties for new profiles
+
         self.screenTimePasscode = nil
         self.dailyLimitInMinutes = 60
         self.timeSpentToday = 0
@@ -112,7 +103,7 @@ struct ActivityRecord: Identifiable, Codable, Equatable {
 }
 
 struct Reward: Identifiable, Hashable {
-    let id: String // The ID is now a permanent, non-optional constant
+    let id: String
     let title: String
     let description: String
     let imageName: String
@@ -125,11 +116,8 @@ struct AppUser: Identifiable, Codable {
     var displayName: String
 }
 
-
-// MARK: - AuthViewModel
 @MainActor
 class AuthViewModel: ObservableObject {
-    // MARK: Published Properties
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: AppUser?
     @Published var toddlerProfiles: [ToddlerProfile] = []
@@ -146,7 +134,6 @@ class AuthViewModel: ObservableObject {
     @Published var messageContent = ""
     @Published var messageIsError = false
     
-    // This new property checks if the user's account is password-based
     var isPasswordUser: Bool {
         guard let providerId = userSession?.providerData.first?.providerID else { return false }
         return providerId == "password"
@@ -159,8 +146,7 @@ class AuthViewModel: ObservableObject {
         .init(id: "park", title: "A Visit to the Park", description: "Let's go outside! It's time for an adventure at the park to celebrate a job well done.", imageName: "figure.walk.circle"),
         .init(id: "toy", title: "A Toy of Choice", description: "A special prize for a special learner! Your little nugget gets to choose a new toy on your next shopping trip.", imageName: "star.circle")
     ]
-    
-    // MARK: - Init
+
     init() {
         self.userSession = Auth.auth().currentUser
         if self.userSession != nil {
@@ -171,8 +157,7 @@ class AuthViewModel: ObservableObject {
             self.appState = .splash
         }
     }
-    
-    // MARK: - Public Methods
+
     func displayMessage(_ title: String, _ content: String, isError: Bool) {
         messageTitle = title
         messageContent = content
@@ -210,7 +195,6 @@ class AuthViewModel: ObservableObject {
     }
     
     func signOut() async {
-        // Await the final save of any pending screen time changes.
         await saveScreenTimeData()
         
         do {
@@ -221,7 +205,6 @@ class AuthViewModel: ObservableObject {
             self.selectedToddlerProfile = nil
             self.activityHistory = []
             
-            // Reset the manager's state for the next user.
             ScreenTimeManager.shared.reset()
             
             self.appState = .login
@@ -549,15 +532,12 @@ class AuthViewModel: ObservableObject {
             defer { isLoading = false }
             
             do {
-                // Delete the profile from Firestore
                 try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).delete()
-                
-                // Remove the profile from the local array
+
                 if let index = self.toddlerProfiles.firstIndex(where: { $0.id == profileId }) {
                     self.toddlerProfiles.remove(at: index)
                 }
-                
-                // Update the selected profile
+
                 if self.toddlerProfiles.isEmpty {
                     self.selectedToddlerProfile = nil
                     self.appState = .toddlerProfileSetup
@@ -570,11 +550,80 @@ class AuthViewModel: ObservableObject {
                 displayMessage("Profile Deletion Failed", error.localizedDescription, isError: true)
             }
         }
+
+    func generateAIReport() async -> AIReport? {
+        guard let profile = selectedToddlerProfile else { return nil }
+
+        let ai = FirebaseAI.firebaseAI()
+        let model = ai.generativeModel(modelName: "gemini-1.5-flash")
+
+        let parentName = self.currentUser?.displayName ?? "there"
+
+        let topActivities = Dictionary(grouping: activityHistory, by: { $0.activityName })
+            .mapValues { $0.count }
+            .sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { $0.key }
+
+        let prompt = """
+          Act as a warm, encouraging, and insightful early childhood educator.
+          Your task is to generate a short, positive, and easy-to-read progress report for a parent about their toddler's activity in the Toddl-AR app.
+
+          Here is the data for the parent and toddler:
+          - Parent's Name: \(parentName)
+          - Toddler's Name: \(profile.name)
+          - Cognitive Skills Progress: \(Int(profile.cognitiveSkillsProgress * 100))%
+          - Color Perception Progress: \(Int(profile.colorPerceptionProgress * 100))%
+          - Observation Skills Progress: \(Int(profile.observationSkillsProgress * 100))%
+          - Their favorite activities recently have been: \(topActivities.joined(separator: ", ")).
+
+          Based on this data, please write a 5-6 sentence report.
+          - Start with a positive greeting addressed to the parent by their name (e.g., "Hi \(parentName),").
+          - Mention their toddler's progress in a specific area.
+          - Mention the area for improvement.
+          - Highlight their interest in their favorite activities.
+          - Conclude with an encouraging remark for the parent.
+          - Do not use technical jargon. Keep the language simple and heartwarming.
+        """
+
+        do {
+            let response = try await model.generateContent(prompt)
+            
+            let skills = [
+                ("Cognitive", profile.cognitiveSkillsProgress),
+                ("Color", profile.colorPerceptionProgress),
+                ("Observation", profile.observationSkillsProgress)
+            ]
+            let weakestSkill = skills.min(by: { $0.1 < $1.1 })
+            let allActivities: [Activity] = [
+                .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
+                .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
+                .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"]),
+                .init(id: "ar-doodling", name: "AR Doodling", categories: ["Creative"])
+            ]
+            
+            var suggestions: [Activity] = []
+            if let weakest = weakestSkill, weakest.1 < 0.8 {
+                suggestions = allActivities.filter { $0.categories.contains(weakest.0) }.shuffled().prefix(2).map { $0 }
+            }
+            
+            return AIReport(
+                assessment: response.text ?? "Could not generate report text.",
+                suggestions: suggestions,
+                topActivities: allActivities.filter { topActivities.contains($0.name) }
+            )
+
+        } catch {
+            print("Error generating content: \(error.localizedDescription)")
+            return AIReport(
+                assessment: "There was an issue generating the report. Please check your connection and try again.",
+                suggestions: [],
+                topActivities: []
+            )
+        }
+    }
 }
 
-
-// These two helper classes are for the Recent Activities screen.
-// They can remain here or be moved to the ContentView file.
 struct AggregatedActivityRecord: Identifiable, Hashable {
     let id: String
     let name: String
@@ -591,6 +640,12 @@ enum ActivityFilter: Hashable, Identifiable {
         case .date(let date): return date.ISO8601Format()
         }
     }
+}
+
+struct AIReport {
+    let assessment: String
+    let suggestions: [Activity]
+    let topActivities: [Activity]
 }
 
 extension UIApplication {

@@ -1,5 +1,3 @@
-// Toddl-AR/Haptics.swift
-
 import UIKit
 
 class Haptics {

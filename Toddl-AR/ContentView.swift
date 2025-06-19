@@ -1,4 +1,3 @@
-// Toddl-AR/ContentView.swift
 import SwiftUI
 import RealityKit
 import Combine
@@ -12,12 +11,9 @@ extension View {
 }
 #endif
 
-// Main View that controls the app's flow
 struct ContentView: View {
     @StateObject private var viewModel = AuthViewModel()
     @Environment(\.colorScheme) var colorScheme
-    
-    //    @StateObject private var screenTimeManager = ScreenTimeManager()
     
     var body: some View {
         ZStack {
@@ -39,16 +35,11 @@ struct ContentView: View {
             }
             .environmentObject(viewModel)
             .animation(.easeInOut, value: viewModel.appState)
-            //            .environmentObject(screenTimeManager)
-            
-            // --- REPLACE your existing 'if viewModel.isLoading' block with this ---
+
             if viewModel.isLoading {
-                // If the app is loading AND on the splash screen...
                 if viewModel.appState == .splash {
-                    // ...show the new progress bar.
                     SplashLoadingBarView()
                 } else {
-                    // ...otherwise, show the original circular modal.
                     LoadingView()
                 }
             }
@@ -67,23 +58,18 @@ struct ContentView: View {
                 )
             }
             
-            // --- ADD THIS LEVEL UP POPUP ---
             if viewModel.showLevelUpPopup {
                 LevelUpView(onDismiss: {
                     viewModel.showLevelUpPopup = false
                 })
             }
-            
-            // --- ADD THIS BLOCK ---
+
             if viewModel.isRedeemingReward {
                 RedeemingView()
             }
-            // ---------------------
         }
         .environmentObject(viewModel)
-        // Add this new modifier to watch for changes
         .onChange(of: colorScheme) { _ in
-            // When the theme changes, send our manual notification
             ThemeManager.shared.themeChanged.send()
         }
     }
@@ -95,10 +81,6 @@ struct Activity: Identifiable {
     let categories: [String]
 }
 
-// --- NEW --- Numbers in AR Activity
-// In Toddl-AR/ContentView.swift
-
-// --- REPLACE the entire NumbersARView struct with this one ---
 struct NumbersARView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var startTime = Date()
@@ -128,7 +110,6 @@ struct NumbersARView: View {
                     Spacer()
                     
                     HStack(spacing: 20) {
-                        // Updated "Finish" button
                         Button("Finish") {
                             Haptics.shared.impact(.medium)
                             finishActivity()
@@ -139,14 +120,12 @@ struct NumbersARView: View {
                         .foregroundColor(.white)
                         .cornerRadius(15)
                         
-                        // Updated "Next/Done!" button
                         Button(action: {
                             Haptics.shared.impact(.light)
                             if currentIndex < challenges.count - 1 {
                                 currentIndex += 1
                                 isSolved = false
                             } else {
-                                // On the last step, call finishActivity
                                 finishActivity()
                             }
                         }) {
@@ -186,11 +165,8 @@ struct NumbersARView: View {
         self.challenges = newChallenges
     }
     
-    // --- NEW HELPER FUNCTION ---
     private func finishActivity() {
         let duration = Date().timeIntervalSince(startTime)
-        
-        // We count how many challenges were actually solved
         let stepsCompleted = isSolved ? (currentIndex + 1) : currentIndex
         
         Task {
@@ -200,9 +176,7 @@ struct NumbersARView: View {
                 totalSteps: challenges.count,
                 stepsCompleted: stepsCompleted,
                 duration: duration,
-                //                screenTimeManager: screenTimeManager
             )
-            // Dismiss the view after the update is complete
             activeActivityId = nil
         }
     }
@@ -219,12 +193,9 @@ struct NumberChallenge {
 struct NumbersARViewContainer: UIViewRepresentable {
     var challenge: NumberChallenge?
     @Binding var isSolved: Bool
-    //    var key: Int
     
     func makeUIView(context: Context) -> ARView {
-        // --- ADD THIS LINE ---
         print("AR VIEW IS RESETTING: makeUIView has been called.")
-        // -----------------------
         
         let arView = ARView(frame: .zero)
         context.coordinator.arView = arView
@@ -243,50 +214,37 @@ struct NumbersARViewContainer: UIViewRepresentable {
         Coordinator()
     }
     
-    // Replace the entire Coordinator class with this updated version
-    
     class Coordinator: NSObject {
         weak var arView: ARView?
         var challengeAnchor: AnchorEntity?
         var isSolved: Binding<Bool>?
         private var currentChallenge: NumberChallenge?
-        
-        // --- NEW PROPERTIES ---
         private var previousCountInZone: Int = -1
         private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
         
-        // --- UPDATED: updateChallenge now only sets up the scene once ---
         func updateChallenge(_ newChallenge: NumberChallenge?) {
-            // Check if the new challenge is actually different from the current one.
-            // This is the key to preventing the reset on completion. If the challenge is the same, we do nothing.
             if newChallenge?.question == self.currentChallenge?.question {
                 return
             }
             
-            // --- If it's a NEW challenge, we proceed with the reset ---
-            
             self.currentChallenge = newChallenge
-            self.previousCountInZone = -1 // Reset the haptic counter
+            self.previousCountInZone = -1
             
             challengeAnchor?.removeFromParent()
             guard let challenge = newChallenge else { return }
-            
-            // Create a new anchor for a fresh scene
+
             let anchor = AnchorEntity(plane: .horizontal)
             
             let zoneMesh = MeshResource.generatePlane(width: 0.5, depth: 0.5)
-            // The material is created fresh and blue every time
             let zoneMaterial = UnlitMaterial(color: .blue.withAlphaComponent(0.1))
             let zoneEntity = ModelEntity(mesh: zoneMesh, materials: [zoneMaterial])
             zoneEntity.name = "targetZone"
             anchor.addChild(zoneEntity)
-            
-            // Lay out the initial cubes for the new challenge
+
             for _ in 0..<challenge.initialCount {
                 anchor.addChild(createCube(inZone: true))
             }
             
-            // Lay out the cubes outside the zone
             for _ in 0..<6 {
                 anchor.addChild(createCube(inZone: false))
             }
@@ -325,7 +283,6 @@ struct NumbersARViewContainer: UIViewRepresentable {
             }
         }
         
-        // --- UPDATED: recalculateAndCheckSolution now has haptics ---
         func recalculateAndCheckSolution() {
             guard let anchor = challengeAnchor, let challenge = currentChallenge else { return }
             
@@ -343,14 +300,11 @@ struct NumbersARViewContainer: UIViewRepresentable {
             }
             
             if countInZone == challenge.answer {
-                // Only trigger "solved" state and animation if the challenge wasn't already marked as solved.
-                // This prevents the green zone from getting stuck.
                 if isSolved?.wrappedValue == false {
                     isSolved?.wrappedValue = true
                     playSuccessAnimation()
                 }
             } else {
-                // If the user moves a cube out of the correct solution, mark it as unsolved again.
                 isSolved?.wrappedValue = false
             }
         }
@@ -358,19 +312,13 @@ struct NumbersARViewContainer: UIViewRepresentable {
         func playSuccessAnimation() {
             guard let zone = challengeAnchor?.findEntity(named: "targetZone") as? ModelEntity else { return }
             
-            // Create the green success material
             var successMaterial = UnlitMaterial(color: .green)
             successMaterial.blending = .transparent(opacity: 0.5)
-            
-            // Set the zone's material to green, and that's it!
+
             zone.model?.materials = [successMaterial]
-            
-            // The part that changed the color back has been removed.
         }
     }
 }
-
-// --- NEW --- Shapes in AR Activity
 
 enum ShapeType {
     case generated(MeshResource)
@@ -385,33 +333,31 @@ struct ShapeStep {
     var positionOffset: SIMD3<Float>? = nil
 }
 
-// The main SwiftUI view for the Shapes AR Activity
 struct ShapesARView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var startTime = Date()
     @Binding var activeActivityId: ActivityID?
     @State private var currentIndex = 0
     
-    // Updated data source with new shapes
     let shapeData: [ShapeStep] = [
         .init(name: "Cube", color: .systemRed, type: .generated(.generateBox(size: 1.0)),
               targetSize: 0.15),
         
             .init(name: "Sphere", color: .systemBlue, type: .generated(.generateSphere(radius: 1.0)),
-                  targetSize: 0.2), // A bit larger
+                  targetSize: 0.2),
         
             .init(name: "Cylinder", color: .systemGreen, type: .loaded(named: "Cylinder.usdz"),
                   targetSize: 0.002, positionOffset: [0, -0.2, 0]),
         
             .init(name: "Pyramid", color: .systemPurple, type: .loaded(named: "Pyramid.usdz"),
                   targetSize: 0.0025,
-                  positionOffset: [0, 0, 0]), // Move the pyramid up to sit on the "ground"
+                  positionOffset: [0, 0, 0]),
         
             .init(name: "Cone", color: .systemOrange, type: .loaded(named: "Cone.usdz"),
                   targetSize: 0.0025,
-                  positionOffset: [0, -0.05, 0]), // Move the cone up
+                  positionOffset: [0, -0.05, 0]),
         
-            .init(name: "Box", color: .systemYellow, type: .generated(.generateBox(size: [0.2, 0.05, 0.12]))) // No targetSize, uses the mesh's defined size
+            .init(name: "Box", color: .systemYellow, type: .generated(.generateBox(size: [0.2, 0.05, 0.12])))
     ]
     
     var body: some View {
@@ -470,7 +416,6 @@ struct ShapesARView: View {
     }
 }
 
-// Helper view modifier for navigation buttons
 struct NavButtonModifier: ViewModifier {
     var disabled: Bool = false
     func body(content: Content) -> some View {
@@ -484,8 +429,6 @@ struct NavButtonModifier: ViewModifier {
     }
 }
 
-
-// The container that hosts the ARView for the shapes activity
 struct ShapesARViewContainer: UIViewRepresentable {
     let models: [ShapeStep]
     @Binding var currentIndex: Int
@@ -546,14 +489,12 @@ struct ShapesARViewContainer: UIViewRepresentable {
                 }
             }
             
-            // --- Apply size and position using the familiar pattern ---
             if let size = step.targetSize {
                 normalizeAndConfigure(shapeEntity, targetSize: size)
             }
             if let offset = step.positionOffset {
                 shapeEntity.position = offset
             }
-            // -----------------------------------------------------------
             
             shapeEntity.model?.materials = [shapeMaterial]
             anchor.addChild(shapeEntity)
@@ -575,7 +516,6 @@ struct ShapesARViewContainer: UIViewRepresentable {
     }
 }
 
-// AR Activity View for Alphabets
 struct ARActivityView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var startTime = Date()
@@ -646,8 +586,6 @@ struct ARActivityView: View {
                     
                     Button("Finish") {
                         let duration = Date().timeIntervalSince(startTime)
-                        // This assumes the user "completes" the activity by finishing.
-                        // We pass the total number of steps and how many were viewed.
                         Task {
                             await viewModel.updateProgressAndHistory(
                                 activityId: "alphabets-in-ar",
@@ -655,9 +593,7 @@ struct ARActivityView: View {
                                 totalSteps: alphabetData.count,
                                 stepsCompleted: currentIndex + 1,
                                 duration: duration,
-                                //                                screenTimeManager: screenTimeManager
                             )
-                            // Now dismiss the view
                             activeActivityId = nil
                         }
                     }
@@ -683,7 +619,6 @@ struct ARActivityView: View {
     }
 }
 
-// Data model for each step in the alphabet activity
 struct AlphabetStep {
     let letter: String
     let word: String
@@ -729,17 +664,14 @@ struct ARViewContainer: UIViewRepresentable {
         
         @MainActor
         func showAlphabet(at index: Int) async {
-            // If we have a persistent anchor, remove all the old models from it.
             if let anchor = self.alphabetAnchor {
                 anchor.children.removeAll()
             } else {
-                // If this is the first run, create our persistent anchor and add it to the scene.
                 let newAnchor = AnchorEntity(plane: .horizontal)
                 arView?.scene.addAnchor(newAnchor)
                 self.alphabetAnchor = newAnchor
             }
-            
-            // We can now be sure we have a clean anchor to work with.
+
             guard let anchor = self.alphabetAnchor else { return }
             guard index < models.count else { return }
             
@@ -751,8 +683,7 @@ struct ARViewContainer: UIViewRepresentable {
             
             do {
                 let objectEntity = try await ModelEntity(named: step.modelName)
-                
-                // This helper function will now add the new models to our persistent anchor
+
                 configureAndPlaceModels(letter: letterEntity, object: objectEntity, on: anchor, step: step)
                 
             } catch {
@@ -808,8 +739,6 @@ struct ARViewContainer: UIViewRepresentable {
     }
 }
 
-
-// The Splash Screen View
 struct SplashScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var scale: CGFloat = 0.8
@@ -847,7 +776,6 @@ struct SplashScreenView: View {
     }
 }
 
-// View for the swipeable intro screens
 struct IntroScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     
@@ -871,7 +799,6 @@ struct IntroScreenView: View {
     }
 }
 
-// The Login Screen
 struct LoginView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var email = ""
@@ -913,7 +840,6 @@ struct LoginView: View {
                         }
                     }
                     
-                    
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.secondary)
@@ -936,7 +862,6 @@ struct LoginView: View {
     }
 }
 
-// The Sign Up Screen
 struct SignUpView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var name = ""
@@ -1004,7 +929,6 @@ struct SignUpView: View {
     }
 }
 
-// Toddler Profile Setup Screen
 struct ToddlerProfileSetupView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var toddlerName = ""
@@ -1052,8 +976,6 @@ struct ToddlerProfileSetupView: View {
     }
 }
 
-// Main Hub View with Bottom Tab Bar
-// --- REPLACE the MainHubView with this corrected version ---
 struct MainHubView: View {
     @State private var selectedTab: Tab = .activity
     @Namespace private var animation
@@ -1075,7 +997,6 @@ struct MainHubView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
-            // Custom Tab Bar
             HStack {
                 TabBarButton(iconName: "gamecontroller.fill", tab: .activity, selectedTab: $selectedTab, animation: animation)
                 TabBarButton(iconName: "person.fill", tab: .profile, selectedTab: $selectedTab, animation: animation)
@@ -1084,7 +1005,6 @@ struct MainHubView: View {
             .padding(.horizontal)
             .padding(.top, 14)
             .padding(.bottom, 30)
-            // --- FIX: Use an adaptive material background ---
             .background(.regularMaterial)
             .cornerRadius(20)
             .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
@@ -1105,14 +1025,9 @@ struct MainHubView: View {
     }
 }
 
-// Allows using a String? for the .fullScreenCover item
 struct ActivityID: Identifiable {
     let id: String
 }
-
-// --- NEW --- Reusable view for the activity cards on the main hub
-
-// Replace the entire ActivityCardView struct with this corrected version.
 
 struct ActivityCardView: View {
     let activityId: String
@@ -1121,11 +1036,14 @@ struct ActivityCardView: View {
     
     var body: some View {
         VStack {
-            // The helper property now contains the necessary modifiers inside it
-            activityImageView
-                .frame(height: 120) // These modifiers work on any view
-                .clipped()
-                .cornerRadius(15)
+            HStack {
+                Spacer()
+                activityImageView
+                Spacer()
+            }
+            .frame(height: 120)
+            .clipped()
+            .cornerRadius(15)
             
             Text(activityName)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -1133,7 +1051,6 @@ struct ActivityCardView: View {
                 .multilineTextAlignment(.center)
                 .foregroundColor(.primary)
             
-            // --- ADD THIS BLOCK TO DISPLAY THE DURATION ---
             if let duration = duration {
                 Spacer(minLength: 4)
                 HStack(spacing: 4) {
@@ -1143,7 +1060,6 @@ struct ActivityCardView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             }
-            // ---------------------------------------------
         }
         .padding()
         .background(Color(UIColor.secondarySystemGroupedBackground))
@@ -1163,35 +1079,27 @@ struct ActivityCardView: View {
     
     @ViewBuilder
     private var activityImageView: some View {
-        // --- FIX: The special case for "shapes-in-ar" is now removed ---
-        // The view will now look for an image with the same name as the activity's ID.
         Image(activityId)
             .resizable()
-            .aspectRatio(contentMode: .fill)
+            .aspectRatio(contentMode: .fit)
     }
 }
 
-// Activities View (Home Screen)
-// --- REPLACE the entire ActivitiesView with this new version ---
 struct ActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Binding var activeActivityId: ActivityID?
     
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
     
-    // State for search and filtering
     @State private var searchText = ""
     @State private var selectedCategory = "All"
     
-    // Haptic generator for UI feedback
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .medium)
     
     @Namespace private var categoryAnimation
     
-    // New category list
     let categories = ["All", "Cognitive", "Color", "Observation", "Creative"]
     
-    // New structured list of all activities with their categories
     let allActivities: [Activity] = [
         .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
         .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
@@ -1199,16 +1107,13 @@ struct ActivitiesView: View {
         .init(id: "ar-doodling", name: "AR Doodling", categories: ["Creative"])
     ]
     
-    // This computed property automatically filters the activities based on state
     private var filteredActivities: [Activity] {
         var activitiesToShow = allActivities
         
-        // 1. Filter by the selected category
         if selectedCategory != "All" {
             activitiesToShow = allActivities.filter { $0.categories.contains(selectedCategory) }
         }
         
-        // 2. Filter by the search text
         if !searchText.isEmpty {
             activitiesToShow = activitiesToShow.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
@@ -1228,18 +1133,15 @@ struct ActivitiesView: View {
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .padding(.top, 20)
                         
-                        // Search bar
                         CustomTextField(placeholder: "Search activity...", text: $searchText, iconName: "magnifyingglass")
                         
                         Text("Category")
                             .font(.headline)
-                        
-                        // Category filter buttons
+
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
                                 ForEach(categories, id: \.self) { category in
                                     CategoryButton(title: category, isSelected: selectedCategory == category, animation: categoryAnimation) {
-                                        // Add haptic feedback on tap
                                         hapticGenerator.impactOccurred()
                                         withAnimation(.spring()) {
                                             selectedCategory = category
@@ -1249,7 +1151,6 @@ struct ActivitiesView: View {
                             }
                         }
                         
-                        // The grid now uses the filteredActivities list
                         LazyVGrid(columns: columns, spacing: 20) {
                             ForEach(filteredActivities) { activity in
                                 Button(action: {
@@ -1276,18 +1177,13 @@ struct ActivitiesView: View {
     }
 }
 
-// Settings Screen
-// In ContentView.swift
-
-// --- REPLACE the entire SettingsView with this complete version ---
 struct SettingsView: View {
     @EnvironmentObject var viewModel: AuthViewModel
-    @State private var isShowingChangePassword = false // State to control the sheet
+    @State private var isShowingChangePassword = false
     
     var body: some View {
         NavigationView {
             Form {
-                // Section 1: Account Information (Restored)
                 Section(header: Text("Account Information")) {
                     HStack {
                         Image(systemName: "person.crop.circle.fill")
@@ -1305,9 +1201,7 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Section 2: Security
                 Section(header: Text("Security")) {
-                    // This button now correctly presents the sheet
                     Button("Change Password") {
                         isShowingChangePassword = true
                     }
@@ -1321,21 +1215,18 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                 }
                 
-                // Section 3: New "Health" section
                 Section(header: Text("Health")) {
                     NavigationLink("Screen Time Settings") {
                         ScreenTimeSettingsView()
                     }
                 }
                 
-                // Section 4: Notifications (Restored)
                 Section(header: Text("Notifications")) {
                     Toggle(isOn: .constant(true)) {
                         Text("Enable Notifications")
                     }
                 }
                 
-                // Section 5: Sign Out (Restored)
                 Section {
                     Button(action: {
                         Task {
@@ -1402,6 +1293,9 @@ struct ToddlerProfileView: View {
                             NavigationLink(destination: RewardsScreenView()) {
                                 ProfileOptionButton(title: "Rewards")
                             }
+                            NavigationLink(destination: AIProgressReportView()) {
+                                ProfileOptionButton(title: "AI Progress Report")
+                            }
                             Button {
                                 isShowingUpdateSheet = true
                             } label: {
@@ -1435,8 +1329,6 @@ struct ToddlerProfileView: View {
         }
     }
 }
-
-// --- NEW/UPDATED Reusable UI Components ---
 
 struct LoadingView: View {
     var body: some View {
@@ -1472,7 +1364,6 @@ struct MessageView: View {
         ZStack {
             Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
                 .onTapGesture {
-                    // Prevent dismissal by tapping background
                 }
             
             VStack(spacing: 20) {
@@ -1523,12 +1414,10 @@ struct TabBarButton: View {
     @Binding var selectedTab: MainHubView.Tab
     let animation: Namespace.ID
     
-    // Add a light haptic generator for tab switching
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
     
     var body: some View {
         Button(action: {
-            // Only trigger haptics and state change if the tab is new
             if selectedTab != tab {
                 hapticGenerator.impactOccurred()
                 selectedTab = tab
@@ -1559,7 +1448,7 @@ struct TabBarButton: View {
 struct CategoryButton: View {
     let title: String
     let isSelected: Bool
-    let animation: Namespace.ID // This can now be removed if not used elsewhere, but is safe to keep
+    let animation: Namespace.ID
     let action: () -> Void
     
     var body: some View {
@@ -1568,7 +1457,6 @@ struct CategoryButton: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
-            // --- FIX: Explicitly set colors for both states ---
                 .background(isSelected ? Color.orange : Color(UIColor.systemGray4))
                 .foregroundColor(isSelected ? .white : .primary)
                 .clipShape(Capsule())
@@ -1577,13 +1465,11 @@ struct CategoryButton: View {
     }
 }
 
-// --- Other Reusable Components (Unchanged) ---
 struct ProfileOptionButton: View {
     let title: String
     var body: some View {
         Text(title)
             .font(.system(size: 20, weight: .semibold, design: .rounded))
-        // --- FIX: Use an adaptive text color ---
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
             .padding()
@@ -1671,9 +1557,6 @@ struct IntroPage: View {
     }
 }
 
-// In ContentView.swift
-
-// --- NEW SCREEN 1: Toddler's Progress ---
 struct ProgressScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.colorScheme) var colorScheme
@@ -1687,7 +1570,6 @@ struct ProgressScreenView: View {
                 VStack(spacing: 20) {
                     if let profile = viewModel.selectedToddlerProfile {
                         
-                        // --- ADDED Name and Image ---
                         Text(profile.name)
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                         
@@ -1699,12 +1581,10 @@ struct ProgressScreenView: View {
                             .shadow(radius: 7)
                             .padding(.bottom)
                         
-                        // --- Current Level Display ---
                         Text("Current Level: \(profile.level)")
                             .font(.title2.weight(.semibold))
                             .padding(.bottom)
                         
-                        // --- Progress Bars ---
                         ProgressRow(
                             title: "Cognitive Skills",
                             progress: profile.cognitiveSkillsProgress,
@@ -1759,12 +1639,6 @@ struct ProgressRow: View {
     }
 }
 
-
-// --- NEW SCREEN 2: Recent Activities ---
-// --- REPLACE the entire RecentActivitiesView struct ---
-
-// --- REPLACE the entire RecentActivitiesView struct with this new simplified version ---
-
 struct RecentActivitiesView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var selectedFilter: ActivityFilter = .allTime
@@ -1772,7 +1646,6 @@ struct RecentActivitiesView: View {
     
     @Environment(\.colorScheme) var colorScheme
     
-    // A computed property that generates the date filter buttons
     private var dateFilters: [ActivityFilter] {
         var uniqueDates: [Date] = []
         for record in viewModel.activityHistory {
@@ -1789,8 +1662,7 @@ struct RecentActivitiesView: View {
         
         return filters
     }
-    
-    // A computed property that filters and aggregates the records based on the selected filter
+
     private var aggregatedRecords: [AggregatedActivityRecord] {
         let recordsToProcess: [ActivityRecord]
         
@@ -1807,7 +1679,7 @@ struct RecentActivitiesView: View {
             guard let firstRecord = recordsInGroup.first else { return nil }
             let totalDuration = recordsInGroup.reduce(0) { $0 + $1.durationInSeconds }
             return AggregatedActivityRecord(id: firstRecord.activityId, name: firstRecord.activityName, totalDuration: totalDuration)
-        }.sorted(by: { $0.name < $1.name }) // Sort alphabetically
+        }.sorted(by: { $0.name < $1.name })
     }
     
     let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
@@ -1817,7 +1689,6 @@ struct RecentActivitiesView: View {
             Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
-                // Horizontal scrolling filter bar
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(dateFilters) { filter in
@@ -1831,7 +1702,6 @@ struct RecentActivitiesView: View {
                 }
                 .background(Color(UIColor.systemGray6))
                 
-                // Grid of activity cards
                 ScrollView {
                     if aggregatedRecords.isEmpty {
                         ContentUnavailableView(
@@ -1861,11 +1731,9 @@ struct RecentActivitiesView: View {
             self.redrawTrigger.toggle()
         }
         .id(redrawTrigger)
-        // No need to call fetch here anymore, it's handled at app launch
     }
 }
 
-// A new subview for the filter buttons
 struct FilterButton: View {
     let filter: ActivityFilter
     let isSelected: Bool
@@ -1897,7 +1765,6 @@ struct FilterButton: View {
     }
 }
 
-// --- REPLACE the RewardsScreenView struct with this final version ---
 struct RewardsScreenView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.colorScheme) var colorScheme
@@ -1917,9 +1784,7 @@ struct RewardsScreenView: View {
                         ForEach(Array(viewModel.allRewards.enumerated()), id: \.element) { index, reward in
                             RewardCardView(
                                 reward: reward,
-                                
-                                // --- FINAL, CORRECTED UNLOCK LOGIC ---
-                                // This now checks the level progress within the current 5-reward cycle.
+
                                 isUnlocked: (profile.level % viewModel.allRewards.count) > index,
                                 
                                 isRedeemed: profile.redeemedRewardIDs.contains(reward.id),
@@ -1948,7 +1813,6 @@ struct RewardsScreenView: View {
     }
 }
 
-// --- REPLACE the entire RewardCardView struct with this final version ---
 struct RewardCardView: View {
     let reward: Reward
     let isUnlocked: Bool
@@ -1978,8 +1842,6 @@ struct RewardCardView: View {
             
             Spacer(minLength: 0)
             
-            // --- NEW LOGIC FOR REDEEMED STATE ---
-            // If the reward is redeemed, show the checkmark here instead of the button
             if isRedeemed {
                 HStack {
                     Image(systemName: "checkmark.seal.fill")
@@ -1991,7 +1853,6 @@ struct RewardCardView: View {
                 .font(.title2)
                 .padding(.bottom)
             } else {
-                // Otherwise, show the redeem button
                 Button(action: onRedeem) {
                     Text("Redeem Reward")
                         .fontWeight(.bold)
@@ -1999,18 +1860,16 @@ struct RewardCardView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
-                .disabled(!isUnlocked) // The button is disabled if not unlocked
+                .disabled(!isUnlocked)
                 .padding([.horizontal, .bottom])
             }
         }
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
-            // The overlay is now only for the lock icon
             ZStack {
                 if !isUnlocked {
                     Color.black.opacity(0.6).clipShape(RoundedRectangle(cornerRadius: 20))
-                    // --- FIX for lock icon position ---
                     Image(systemName: "lock.fill")
                         .font(.largeTitle)
                         .foregroundColor(.white)
@@ -2020,7 +1879,6 @@ struct RewardCardView: View {
     }
 }
 
-// --- NEW VIEW: LEVEL UP POPUP ---
 struct LevelUpView: View {
     let onDismiss: () -> Void
     @State private var isShowing = false
@@ -2067,8 +1925,6 @@ struct LevelUpView: View {
     }
 }
 
-// --- NEW VIEW: A POPUP FOR SUCCESSFULLY REDEEMING A REWARD ---
-// --- REPLACE the RedemptionSuccessView struct with this version ---
 struct RedemptionSuccessView: View {
     let reward: Reward
     @EnvironmentObject var viewModel: AuthViewModel
@@ -2088,7 +1944,6 @@ struct RedemptionSuccessView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
-            // This button now directly calls the ViewModel function
             Button("Awesome!") {
                 Task {
                     await viewModel.redeemReward(reward)
@@ -2103,7 +1958,6 @@ struct RedemptionSuccessView: View {
     }
 }
 
-// --- ADD THIS NEW VIEW FOR THE POPUP ---
 struct RedeemingView: View {
     var body: some View {
         ZStack {
@@ -2125,12 +1979,9 @@ struct RedeemingView: View {
     }
 }
 
-// In ContentView.swift
-
-// --- Replace the entire TimeLockedView struct ---
 struct TimeLockedView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
-    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
+    @EnvironmentObject var viewModel: AuthViewModel
     @State private var isShowingPasscodeEntry = false
 
     var body: some View {
@@ -2138,10 +1989,8 @@ struct TimeLockedView: View {
             Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
 
             VStack(spacing: 20) {
-                // --- THIS IS THE FIX ---
                 Text("⌛")
                     .font(.system(size: 80))
-                // -----------------------
                 Text("Whoops, slow down!")
                     .font(.largeTitle).bold()
                     .foregroundColor(.white)
@@ -2163,29 +2012,22 @@ struct TimeLockedView: View {
             PasscodeEntryView(
                 prompt: "Enter passcode to get 15 more minutes.",
                 onSuccess: {
-                    // --- THIS IS THE FIX ---
-                    // Call the view model to grant and save the extension.
                     Task {
                         await viewModel.grantScreenTimeExtension()
                         isShowingPasscodeEntry = false
                     }
-                    // ------------------------
                 }
             )
         }
     }
 }
 
-
-// In ContentView.swift
-
-// --- Replace the entire PasscodeEntryView struct ---
 struct PasscodeEntryView: View {
     let prompt: String
     let onSuccess: () -> Void
 
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
-    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
+    @EnvironmentObject var viewModel: AuthViewModel
     @State private var passcode: String = ""
     @State private var isCreatingPasscode = false
     @State private var firstPasscode: String = ""
@@ -2242,15 +2084,11 @@ struct PasscodeEntryView: View {
                 passcode = ""
             } else {
                 if firstPasscode == passcode {
-                    // --- THIS IS THE FIX ---
-                    // Call the view model to save the new passcode.
                     Task {
                         await viewModel.setScreenTimePasscode(passcode: passcode)
-                        onSuccess() // Dismiss the sheet
+                        onSuccess()
                     }
-                    // ------------------------
                 } else {
-                    // Mismatch
                     wrongPasscode = true
                     passcode = ""
                     firstPasscode = ""
@@ -2267,13 +2105,9 @@ struct PasscodeEntryView: View {
     }
 }
 
-
-// In ContentView.swift
-
-// --- Replace the entire ScreenTimeSettingsView struct ---
 struct ScreenTimeSettingsView: View {
     @ObservedObject private var screenTimeManager = ScreenTimeManager.shared
-    @EnvironmentObject var viewModel: AuthViewModel // <-- Add EnvironmentObject
+    @EnvironmentObject var viewModel: AuthViewModel
     @State private var isUnlocked = false
     @State private var isShowingPasscodeView = false
 
@@ -2294,12 +2128,9 @@ struct ScreenTimeSettingsView: View {
                     }
                     .pickerStyle(.wheel)
                     .onChange(of: screenTimeManager.dailyLimitInMinutes) { newLimit in
-                        // --- THIS IS THE FIX ---
-                        // Call the view model to save the new limit.
                         Task {
                             await viewModel.setScreenTimeLimit(minutes: newLimit)
                         }
-                        // ------------------------
                     }
                 }
             } else {
@@ -2321,14 +2152,13 @@ struct ScreenTimeSettingsView: View {
     }
 }
 
-// --- NEW Reusable Google Sign In Button ---
 struct GoogleSignInButton: View {
     var action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack {
-                Image("google-logo") // You'll need to add a Google logo image to your assets
+                Image("google-logo")
                     .resizable()
                     .frame(width: 20, height: 20)
                 
@@ -2345,11 +2175,9 @@ struct GoogleSignInButton: View {
     }
 }
 
-// --- REPLACE the SplashLoadingBarView struct with this new version ---
 struct SplashLoadingBarView: View {
     @State private var progress: Double = 0.0
     
-    // We'll use a timer to drive the animation
     @State private var timer: Timer?
     
     var body: some View {
@@ -2370,22 +2198,16 @@ struct SplashLoadingBarView: View {
         .padding(.bottom, 60)
         .transition(.opacity.animation(.easeInOut))
         .onAppear {
-            // Invalidate any existing timer first
             timer?.invalidate()
-            // Start a new timer when the view appears
             timer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
-                // On each tick of the timer, increment the progress
-                if self.progress < 0.95 { // We stop it just before 100%
+                if self.progress < 0.95 {
                     self.progress += 0.01
                 } else {
-                    // Once it's nearly full, stop the timer
                     self.timer?.invalidate()
                 }
             }
         }
         .onDisappear {
-            // It's very important to stop the timer when the view disappears
-            // to prevent memory leaks.
             timer?.invalidate()
             timer = nil
         }
@@ -2396,13 +2218,11 @@ struct UpdateToddlerProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
     
-    // State to hold the edited values
     @State private var toddlerName: String
     @State private var toddlerAge: String
     
     @State private var isShowingDeleteConfirmation = false
     
-    // The initializer pre-fills the state with the current profile's data
     init(profile: ToddlerProfile) {
         _toddlerName = State(initialValue: profile.name)
         _toddlerAge = State(initialValue: profile.age)
@@ -2454,7 +2274,6 @@ struct UpdateToddlerProfileView: View {
     }
 }
 
-// --- NEW SCREEN for changing the password ---
 struct ChangePasswordView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
@@ -2470,7 +2289,6 @@ struct ChangePasswordView: View {
     var body: some View {
         NavigationView {
             Form {
-                // The "Current Password" field only appears for email/password users
                 if viewModel.isPasswordUser {
                     Section(header: Text("Current Password"), footer: Text("Required to confirm your identity.")) {
                         SecureField("Enter your current password", text: $currentPassword)
@@ -2502,7 +2320,6 @@ struct ChangePasswordView: View {
                                 currentPassword: currentPassword,
                                 newPassword: newPassword
                             )
-                            // If the password change was successful, dismiss the sheet
                             if !viewModel.showMessage || !viewModel.messageIsError {
                                 dismiss()
                             }
@@ -2515,7 +2332,97 @@ struct ChangePasswordView: View {
     }
 }
 
-// Helper binding extension for the sheet
+struct AIProgressReportView: View {
+    @EnvironmentObject var viewModel: AuthViewModel
+    @State private var report: AIReport?
+    @State private var isLoading = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if isLoading {
+                    ProgressView("Analyzing Toddler's Progress...")
+                        .padding(.top, 50)
+                } else if let report = report {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .font(.title2)
+                                .foregroundColor(.orange)
+                            Text("AI's Assessment")
+                                .font(.title2.bold())
+                        }
+                        Text(report.assessment)
+                            .font(.body)
+                    }
+                    .padding()
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .cornerRadius(15)
+
+                    if !report.suggestions.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.yellow)
+                                Text("Try These Next!")
+                                    .font(.title2.bold())
+                            }
+                            
+                            ForEach(report.suggestions) { activity in
+                                ActivityCardView(activityId: activity.id, activityName: activity.name)
+                            }
+                        }
+                        .padding()
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(15)
+                    }
+
+                    if !report.topActivities.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                             HStack {
+                                Image(systemName: "star.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.yellow)
+                                Text("Top Activities")
+                                    .font(.title2.bold())
+                            }
+                            Text("\(viewModel.selectedToddlerProfile?.name ?? "Your toddler")'s favorite activities are:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            ForEach(report.topActivities.indices, id: \.self) { index in
+                                Text("\(index + 1). \(report.topActivities[index].name)")
+                            }
+                        }
+                        .padding()
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .cornerRadius(15)
+                    }
+
+                } else {
+                    ContentUnavailableView(
+                        "Report Not Available",
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text("Could not generate the AI report at this time. Please check your internet connection and try again.")
+                    )
+                    .padding(.top, 50)
+                }
+                
+                Spacer(minLength: 100)
+            }
+            .padding()
+        }
+        .navigationTitle("AI Progress Report")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            isLoading = true
+            self.report = await viewModel.generateAIReport()
+            isLoading = false
+        }
+    }
+}
+
 //extension Binding where Value == Bool {
 //    var not: Binding<Bool> {
 //        Binding<Bool>(

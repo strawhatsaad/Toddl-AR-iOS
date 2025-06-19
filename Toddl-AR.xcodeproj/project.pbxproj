@@ -51,6 +51,7 @@
 		6729D82E2DFA77BB00800159 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D82D2DFA77BB00800159 /* GoogleSignInSwift */; };
 		6729D84B2DFA859C00800159 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D84A2DFA859C00800159 /* FirebaseStorage */; };
 		6729D84D2DFA859C00800159 /* FirebaseStorageCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6729D84C2DFA859C00800159 /* FirebaseStorageCombine-Community */; };
+		673707F12DFE411000F05D67 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 673707F02DFE411000F05D67 /* FirebaseAI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -152,6 +153,7 @@
 				6729D82E2DFA77BB00800159 /* GoogleSignInSwift in Frameworks */,
 				6729D7D02DF7C7C300800159 /* FirebaseFirestoreCombine-Community in Frameworks */,
 				6729D7CC2DF7C7C300800159 /* FirebaseAuthCombine-Community in Frameworks */,
+				673707F12DFE411000F05D67 /* FirebaseAI in Frameworks */,
 				6729D84B2DFA859C00800159 /* FirebaseStorage in Frameworks */,
 				6729D7CE2DF7C7C300800159 /* FirebaseFirestore in Frameworks */,
 				6729D84D2DFA859C00800159 /* FirebaseStorageCombine-Community in Frameworks */,
@@ -276,6 +278,7 @@
 				6729D82D2DFA77BB00800159 /* GoogleSignInSwift */,
 				6729D84A2DFA859C00800159 /* FirebaseStorage */,
 				6729D84C2DFA859C00800159 /* FirebaseStorageCombine-Community */,
+				673707F02DFE411000F05D67 /* FirebaseAI */,
 			);
 			productName = "Toddl-AR";
 			productReference = 6729D7952DF7AE2A00800159 /* Toddl-AR.app */;
@@ -826,6 +829,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseStorageCombine-Community";
+		};
+		673707F02DFE411000F05D67 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6729D7C82DF7C7C300800159 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

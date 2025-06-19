@@ -1,5 +1,3 @@
-// Toddl-AR/ARDoodleView.swift
-
 import SwiftUI
 import RealityKit
 import ARKit
