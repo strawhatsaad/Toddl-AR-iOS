@@ -2423,15 +2423,6 @@ struct AIProgressReportView: View {
     }
 }
 
-//extension Binding where Value == Bool {
-//    var not: Binding<Bool> {
-//        Binding<Bool>(
-//            get: { !self.wrappedValue },
-//            set: { self.wrappedValue = !$0 }
-//        )
-//    }
-//}
-
 #Preview {
     ContentView()
 }
