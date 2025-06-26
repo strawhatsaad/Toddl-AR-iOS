@@ -1,50 +1,38 @@
-//
-//  AuthViewModel.swift
-//  Toddl-AR
-//
-//  Created by Saad Anjum on 10/06/2025.
-//
-
 import SwiftUI
 import Firebase
 import FirebaseFirestore
 import FirebaseAuth
 import Combine
 import GoogleSignIn
+import FirebaseAI
 
-// MARK: - App State and Data Models
 enum AppState {
     case splash, intro, login, signUp, toddlerProfileSetup, mainHub
 }
 
-struct ToddlerProfile: Identifiable, Codable {
+struct ToddlerProfile: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     var name: String
     var age: String
     let avatarImageName: String
     
-    // Existing Properties
     var cognitiveSkillsProgress: Double
     var colorPerceptionProgress: Double
     var observationSkillsProgress: Double
     var level: Int
     var redeemedRewardIDs: [String]
-    
-    // --- NEW --- Screen Time Properties
+
     var screenTimePasscode: String?
     var dailyLimitInMinutes: Int
     var timeSpentToday: TimeInterval
     var hasGrantedExtensionToday: Bool
-    var lastUsageDate: String // To track the day of the last usage
+    var lastUsageDate: String
     
-    // CodingKeys to map properties to Firestore fields
     enum CodingKeys: String, CodingKey {
         case id, name, age, avatarImageName, cognitiveSkillsProgress, colorPerceptionProgress, observationSkillsProgress, level, redeemedRewardIDs
-        // --- NEW ---
         case screenTimePasscode, dailyLimitInMinutes, timeSpentToday, hasGrantedExtensionToday, lastUsageDate
     }
-    
-    // Custom decoder with default values for backward compatibility
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
@@ -52,54 +40,52 @@ struct ToddlerProfile: Identifiable, Codable {
         name = try container.decode(String.self, forKey: .name)
         age = try container.decode(String.self, forKey: .age)
         avatarImageName = try container.decode(String.self, forKey: .avatarImageName)
+        
         cognitiveSkillsProgress = try container.decodeIfPresent(Double.self, forKey: .cognitiveSkillsProgress) ?? 0.0
         colorPerceptionProgress = try container.decodeIfPresent(Double.self, forKey: .colorPerceptionProgress) ?? 0.0
         observationSkillsProgress = try container.decodeIfPresent(Double.self, forKey: .observationSkillsProgress) ?? 0.0
         level = try container.decodeIfPresent(Int.self, forKey: .level) ?? 0
         redeemedRewardIDs = try container.decodeIfPresent([String].self, forKey: .redeemedRewardIDs) ?? []
-        
-        // --- NEW --- Decode new properties with sensible defaults
+
         screenTimePasscode = try container.decodeIfPresent(String.self, forKey: .screenTimePasscode)
         dailyLimitInMinutes = try container.decodeIfPresent(Int.self, forKey: .dailyLimitInMinutes) ?? 60
         timeSpentToday = try container.decodeIfPresent(TimeInterval.self, forKey: .timeSpentToday) ?? 0.0
         hasGrantedExtensionToday = try container.decodeIfPresent(Bool.self, forKey: .hasGrantedExtensionToday) ?? false
         lastUsageDate = try container.decodeIfPresent(String.self, forKey: .lastUsageDate) ?? ""
     }
-    
-    // Custom encoder to save all properties
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(age, forKey: .age)
         try container.encode(avatarImageName, forKey: .avatarImageName)
+        
         try container.encode(cognitiveSkillsProgress, forKey: .cognitiveSkillsProgress)
         try container.encode(colorPerceptionProgress, forKey: .colorPerceptionProgress)
         try container.encode(observationSkillsProgress, forKey: .observationSkillsProgress)
         try container.encode(level, forKey: .level)
         try container.encode(redeemedRewardIDs, forKey: .redeemedRewardIDs)
-        
-        // --- NEW --- Encode new properties
+
         try container.encodeIfPresent(screenTimePasscode, forKey: .screenTimePasscode)
         try container.encode(dailyLimitInMinutes, forKey: .dailyLimitInMinutes)
         try container.encode(timeSpentToday, forKey: .timeSpentToday)
         try container.encode(hasGrantedExtensionToday, forKey: .hasGrantedExtensionToday)
         try container.encode(lastUsageDate, forKey: .lastUsageDate)
     }
-    
-    // Default initializer for creating brand new profiles
+
     init(id: String? = nil, name: String, age: String, avatarImageName: String) {
         self.id = id
         self.name = name
         self.age = age
         self.avatarImageName = avatarImageName
+        
         self.cognitiveSkillsProgress = 0.0
         self.colorPerceptionProgress = 0.0
         self.observationSkillsProgress = 0.0
         self.level = 0
         self.redeemedRewardIDs = []
-        
-        // --- NEW --- Initialize screen time properties for new profiles
+
         self.screenTimePasscode = nil
         self.dailyLimitInMinutes = 60
         self.timeSpentToday = 0
@@ -117,7 +103,7 @@ struct ActivityRecord: Identifiable, Codable, Equatable {
 }
 
 struct Reward: Identifiable, Hashable {
-    let id: String // The ID is now a permanent, non-optional constant
+    let id: String
     let title: String
     let description: String
     let imageName: String
@@ -130,14 +116,12 @@ struct AppUser: Identifiable, Codable {
     var displayName: String
 }
 
-
-// MARK: - AuthViewModel
 @MainActor
 class AuthViewModel: ObservableObject {
-    // MARK: Published Properties
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: AppUser?
-    @Published var currentToddlerProfile: ToddlerProfile?
+    @Published var toddlerProfiles: [ToddlerProfile] = []
+    @Published var selectedToddlerProfile: ToddlerProfile?
     @Published var appState: AppState = .splash
     
     @Published var activityHistory = [ActivityRecord]()
@@ -150,7 +134,6 @@ class AuthViewModel: ObservableObject {
     @Published var messageContent = ""
     @Published var messageIsError = false
     
-    // This new property checks if the user's account is password-based
     var isPasswordUser: Bool {
         guard let providerId = userSession?.providerData.first?.providerID else { return false }
         return providerId == "password"
@@ -163,8 +146,7 @@ class AuthViewModel: ObservableObject {
         .init(id: "park", title: "A Visit to the Park", description: "Let's go outside! It's time for an adventure at the park to celebrate a job well done.", imageName: "figure.walk.circle"),
         .init(id: "toy", title: "A Toy of Choice", description: "A special prize for a special learner! Your little nugget gets to choose a new toy on your next shopping trip.", imageName: "star.circle")
     ]
-    
-    // MARK: - Init
+
     init() {
         self.userSession = Auth.auth().currentUser
         if self.userSession != nil {
@@ -175,8 +157,7 @@ class AuthViewModel: ObservableObject {
             self.appState = .splash
         }
     }
-    
-    // MARK: - Public Methods
+
     func displayMessage(_ title: String, _ content: String, isError: Bool) {
         messageTitle = title
         messageContent = content
@@ -214,17 +195,16 @@ class AuthViewModel: ObservableObject {
     }
     
     func signOut() async {
-        // Await the final save of any pending screen time changes.
         await saveScreenTimeData()
         
         do {
             try Auth.auth().signOut()
             self.userSession = nil
             self.currentUser = nil
-            self.currentToddlerProfile = nil
+            self.toddlerProfiles = []
+            self.selectedToddlerProfile = nil
             self.activityHistory = []
             
-            // Reset the manager's state for the next user.
             ScreenTimeManager.shared.reset()
             
             self.appState = .login
@@ -242,20 +222,16 @@ class AuthViewModel: ObservableObject {
             let userDocument = try await Firestore.firestore().collection("users").document(uid).getDocument()
             self.currentUser = try userDocument.data(as: AppUser.self)
             
-            let toddlerSnapshot = try await Firestore.firestore().collection("users").document(uid).collection("toddlers").limit(to: 1).getDocuments()
-            
-            if let toddlerDoc = toddlerSnapshot.documents.first {
-                self.currentToddlerProfile = try toddlerDoc.data(as: ToddlerProfile.self)
+            let toddlerSnapshot = try await Firestore.firestore().collection("users").document(uid).collection("toddlers").getDocuments()
+            self.toddlerProfiles = toddlerSnapshot.documents.compactMap { try? $0.data(as: ToddlerProfile.self) }
+
+            if !self.toddlerProfiles.isEmpty {
+                self.selectedToddlerProfile = self.toddlerProfiles.first
                 
-                // --- ADD THIS ---
-                // Configure the ScreenTimeManager with the loaded profile
-                if let profile = self.currentToddlerProfile {
+                if let profile = self.selectedToddlerProfile {
                     ScreenTimeManager.shared.configure(with: profile)
                 }
-                // ------------------
                 
-                // --- THIS IS THE KEY FIX ---
-                // Fetch activity history right after loading the profile.
                 await fetchActivityHistory()
                 
                 self.appState = .mainHub
@@ -280,25 +256,31 @@ class AuthViewModel: ObservableObject {
             newProfile.id = newDocRef.documentID
             try await newDocRef.setData(from: newProfile)
             
-            self.currentToddlerProfile = newProfile
+            self.toddlerProfiles.append(newProfile)
+            self.selectedToddlerProfile = newProfile
             self.appState = .mainHub
         } catch {
             displayMessage("Profile Creation Failed", error.localizedDescription, isError: true)
         }
     }
+
+    func switchToddlerProfile(to profile: ToddlerProfile?) {
+        guard let profile = profile else { return }
+        self.selectedToddlerProfile = profile
+        Task {
+            await fetchActivityHistory()
+        }
+    }
     
     func updateProgressAndHistory(activityId: String, activityName: String, totalSteps: Int, stepsCompleted: Int, duration: TimeInterval) async {
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
         ScreenTimeManager.shared.addSession(duration: duration)
         
-        // --- ADD THIS ---
-        // Get latest usage data and update the profile object before saving
         let (_, _, timeSpent, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
         profile.timeSpentToday = timeSpent
         profile.hasGrantedExtensionToday = hasExtension
         profile.lastUsageDate = date
-        // ------------------
         
         let progressIncrease = (Double(stepsCompleted) / Double(totalSteps)) * 0.2
         
@@ -324,7 +306,7 @@ class AuthViewModel: ObservableObject {
             try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).setData(from: profile, merge: true)
             try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).collection("activityHistory").addDocument(from: newRecord)
             
-            self.currentToddlerProfile = profile
+            self.selectedToddlerProfile = profile
             if !self.activityHistory.contains(newRecord) {
                 self.activityHistory.insert(newRecord, at: 0)
             }
@@ -333,41 +315,36 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- REPLACE the entire redeemReward function with this version ---
     func redeemReward(_ reward: Reward) async {
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
         self.isRedeemingReward = true
         defer { self.isRedeemingReward = false }
         
-        // Add the redeemed reward's ID to our local copy of the profile
         profile.redeemedRewardIDs.append(reward.id)
         
-        // --- NEW REWARD CYCLE LOGIC ---
-        // If the number of redeemed rewards now equals the total number of rewards available,
-        // it means the cycle is complete. We reset the array to start the cycle again.
         if profile.redeemedRewardIDs.count == allRewards.count {
             profile.redeemedRewardIDs = []
         }
         
         do {
-            // Save the updated profile to Firestore
             try await Firestore.firestore()
                 .collection("users").document(uid)
                 .collection("toddlers").document(profileId)
                 .updateData(["redeemedRewardIDs": profile.redeemedRewardIDs])
             
-            // Update the local @Published property to reflect the change
-            self.currentToddlerProfile = profile
+            self.selectedToddlerProfile = profile
             
         } catch {
             print("Error redeeming reward: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - Private Methods
     private func fetchActivityHistory() async {
-        guard let uid = currentUser?.uid, let profileId = currentToddlerProfile?.id else { return }
+        guard let uid = currentUser?.uid, let profileId = selectedToddlerProfile?.id else {
+            self.activityHistory = []
+            return
+        }
         
         do {
             let snapshot = try await Firestore.firestore()
@@ -384,33 +361,25 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- REPLACE the checkForLevelUp function with this cleaned-up version ---
     private func checkForLevelUp(profile: inout ToddlerProfile) {
         let allProgressFull = profile.cognitiveSkillsProgress >= 1.0 &&
         profile.colorPerceptionProgress >= 1.0 &&
         profile.observationSkillsProgress >= 1.0
         
         if allProgressFull {
-            // 1. Level up!
             profile.level = profile.level + 1
             
-            // 2. Reset progress bars
             profile.cognitiveSkillsProgress = 0.0
             profile.colorPerceptionProgress = 0.0
             profile.observationSkillsProgress = 0.0
             
-            // 3. Trigger the celebration popup
             self.showLevelUpPopup = true
-            
-            // 4. The old reset logic that was here has been moved to redeemReward()
         }
     }
     
-    // --- ADD THIS ENTIRE NEW FUNCTION ---
     func signInWithGoogle() async {
         isLoading = true
         
-        // 1. Get the top view controller to present the sign-in flow
         guard let topVC = UIApplication.shared.keyWindow?.rootViewController else {
             displayMessage("Error", "Could not find a view to present from.", isError: true)
             isLoading = false
@@ -418,7 +387,6 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            // 2. Start the Google Sign In flow
             let gidSignInResult = try await GIDSignIn.sharedInstance.signIn(withPresenting: topVC)
             
             guard let idToken = gidSignInResult.user.idToken?.tokenString else {
@@ -426,25 +394,20 @@ class AuthViewModel: ObservableObject {
             }
             let accessToken = gidSignInResult.user.accessToken.tokenString
             
-            // 3. Create a Firebase credential with the Google ID token
             let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
             
-            // 4. Sign in to Firebase with the credential
             let result = try await Auth.auth().signIn(with: credential)
             let user = result.user
             
-            // 5. Check if this is a new user or existing user
             let userDocRef = Firestore.firestore().collection("users").document(user.uid)
             let document = try await userDocRef.getDocument()
             
             if !document.exists {
-                // This is a NEW user, create their document in Firestore
                 print("DEBUG: New user signing in with Google. Creating user document...")
                 let newUser = AppUser(uid: user.uid, email: user.email ?? "", displayName: user.displayName ?? "User")
                 try await userDocRef.setData(from: newUser)
             }
             
-            // 6. Fetch all user data and proceed
             self.userSession = user
             await fetchUserData()
             
@@ -455,27 +418,25 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- ADD THIS NEW FUNCTION ---
     func updateToddlerProfile(name: String, age: String) async {
         isLoading = true
         defer { isLoading = false }
         
-        // Ensure we have all the necessary data
-        guard let uid = currentUser?.uid, var profile = self.currentToddlerProfile, let profileId = profile.id else { return }
+        guard let uid = currentUser?.uid, var profile = self.selectedToddlerProfile, let profileId = profile.id else { return }
         
-        // Update the local copy of the profile with the new details
         profile.name = name
         profile.age = age
         
         do {
-            // Save the entire updated profile back to Firestore
             try await Firestore.firestore()
                 .collection("users").document(uid)
                 .collection("toddlers").document(profileId)
                 .setData(from: profile, merge: true)
             
-            // Update the @Published property to make the UI refresh instantly
-            self.currentToddlerProfile = profile
+            if let index = self.toddlerProfiles.firstIndex(where: { $0.id == profileId }) {
+                self.toddlerProfiles[index] = profile
+                self.selectedToddlerProfile = profile
+            }
         } catch {
             displayMessage("Profile Update Failed", error.localizedDescription, isError: true)
         }
@@ -491,7 +452,6 @@ class AuthViewModel: ObservableObject {
         }
         
         do {
-            // If it's a standard email/password user, they must re-authenticate first.
             if isPasswordUser {
                 guard let email = user.email, let currentPassword = currentPassword, !currentPassword.isEmpty else {
                     displayMessage("Error", "Your current password is required.", isError: true)
@@ -501,8 +461,6 @@ class AuthViewModel: ObservableObject {
                 try await user.reauthenticate(with: credential)
             }
             
-            // Now, update to the new password. This works for both account types.
-            // For Google users, it adds a password to their account.
             try await user.updatePassword(to: newPassword)
             displayMessage("Success!", "Your password has been changed successfully.", isError: false)
             
@@ -512,11 +470,9 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- NEW --- Saves the current state of the ScreenTimeManager to Firestore
     func saveScreenTimeData() async {
-        guard var profile = self.currentToddlerProfile else { return }
+        guard var profile = self.selectedToddlerProfile else { return }
         
-        // Get the latest data from the manager
         let (passcode, limit, usage, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
         
         profile.screenTimePasscode = passcode
@@ -525,12 +481,10 @@ class AuthViewModel: ObservableObject {
         profile.hasGrantedExtensionToday = hasExtension
         profile.lastUsageDate = date
         
-        // Update the local profile and save to Firestore
-        self.currentToddlerProfile = profile
+        self.selectedToddlerProfile = profile
         await saveToddlerProfile(profile)
     }
     
-    // --- NEW --- Helper function to persist the profile
     private func saveToddlerProfile(_ profile: ToddlerProfile) async {
         guard let uid = currentUser?.uid, let profileId = profile.id else { return }
         do {
@@ -545,45 +499,131 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    // --- NEW --- Sets the screen time passcode and saves it to Firestore.
-        func setScreenTimePasscode(passcode: String) async {
-            // 1. Update the in-memory state in the manager for immediate UI feedback.
+    func setScreenTimePasscode(passcode: String) async {
             ScreenTimeManager.shared.setPasscode(passcode)
             
-            // 2. Get the current profile, update it, and save it to the database.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             profile.screenTimePasscode = passcode
             await saveToddlerProfile(profile)
         }
         
-        // --- NEW --- Sets the daily time limit and saves it to Firestore.
         func setScreenTimeLimit(minutes: Int) async {
-            // 1. Update the in-memory state.
             ScreenTimeManager.shared.setDailyLimit(minutes)
 
-            // 2. Get the current profile, update it, and save it to the database.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             profile.dailyLimitInMinutes = minutes
             await saveToddlerProfile(profile)
         }
 
-        // --- NEW --- Grants a time extension and saves it to Firestore.
         func grantScreenTimeExtension() async {
-            // 1. Update the in-memory state.
             ScreenTimeManager.shared.grantExtension()
 
-            // 2. Get the current profile, update it with the extension status, and save.
-            guard var profile = self.currentToddlerProfile else { return }
+            guard var profile = self.selectedToddlerProfile else { return }
             let (_, _, _, hasExtension, date) = ScreenTimeManager.shared.getCurrentDataForSave()
             profile.hasGrantedExtensionToday = hasExtension
             profile.lastUsageDate = date
             await saveToddlerProfile(profile)
         }
+    
+    func deleteToddlerProfile(profile: ToddlerProfile) async {
+            guard let uid = currentUser?.uid, let profileId = profile.id else { return }
+            
+            isLoading = true
+            defer { isLoading = false }
+            
+            do {
+                try await Firestore.firestore().collection("users").document(uid).collection("toddlers").document(profileId).delete()
+
+                if let index = self.toddlerProfiles.firstIndex(where: { $0.id == profileId }) {
+                    self.toddlerProfiles.remove(at: index)
+                }
+
+                if self.toddlerProfiles.isEmpty {
+                    self.selectedToddlerProfile = nil
+                    self.appState = .toddlerProfileSetup
+                } else {
+                    self.selectedToddlerProfile = self.toddlerProfiles.first
+                    await fetchActivityHistory()
+                }
+                
+            } catch {
+                displayMessage("Profile Deletion Failed", error.localizedDescription, isError: true)
+            }
+        }
+
+    func generateAIReport() async -> AIReport? {
+        guard let profile = selectedToddlerProfile else { return nil }
+
+        let ai = FirebaseAI.firebaseAI()
+        let model = ai.generativeModel(modelName: "gemini-1.5-flash")
+
+        let parentName = self.currentUser?.displayName ?? "there"
+
+        let topActivities = Dictionary(grouping: activityHistory, by: { $0.activityName })
+            .mapValues { $0.count }
+            .sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { $0.key }
+
+        let prompt = """
+          Act as a warm, encouraging, and insightful early childhood educator.
+          Your task is to generate a short, positive, and easy-to-read progress report for a parent about their toddler's activity in the Toddl-AR app.
+
+          Here is the data for the parent and toddler:
+          - Parent's Name: \(parentName)
+          - Toddler's Name: \(profile.name)
+          - Cognitive Skills Progress: \(Int(profile.cognitiveSkillsProgress * 100))%
+          - Color Perception Progress: \(Int(profile.colorPerceptionProgress * 100))%
+          - Observation Skills Progress: \(Int(profile.observationSkillsProgress * 100))%
+          - Their favorite activities recently have been: \(topActivities.joined(separator: ", ")).
+
+          Based on this data, please write a 5-6 sentence report.
+          - Start with a positive greeting addressed to the parent by their name (e.g., "Hi \(parentName),").
+          - Mention their toddler's progress in a specific area.
+          - Mention the area for improvement.
+          - Highlight their interest in their favorite activities.
+          - Conclude with an encouraging remark for the parent.
+          - Do not use technical jargon. Keep the language simple and heartwarming.
+        """
+
+        do {
+            let response = try await model.generateContent(prompt)
+            
+            let skills = [
+                ("Cognitive", profile.cognitiveSkillsProgress),
+                ("Color", profile.colorPerceptionProgress),
+                ("Observation", profile.observationSkillsProgress)
+            ]
+            let weakestSkill = skills.min(by: { $0.1 < $1.1 })
+            let allActivities: [Activity] = [
+                .init(id: "alphabets-in-ar", name: "Alphabets in AR", categories: ["Cognitive", "Color", "Observation"]),
+                .init(id: "numbers-in-ar", name: "Numbers in AR", categories: ["Cognitive", "Observation"]),
+                .init(id: "shapes-in-ar", name: "Shapes in AR", categories: ["Color", "Observation"]),
+                .init(id: "ar-doodling", name: "AR Doodling", categories: ["Creative"])
+            ]
+            
+            var suggestions: [Activity] = []
+            if let weakest = weakestSkill, weakest.1 < 0.8 {
+                suggestions = allActivities.filter { $0.categories.contains(weakest.0) }.shuffled().prefix(2).map { $0 }
+            }
+            
+            return AIReport(
+                assessment: response.text ?? "Could not generate report text.",
+                suggestions: suggestions,
+                topActivities: allActivities.filter { topActivities.contains($0.name) }
+            )
+
+        } catch {
+            print("Error generating content: \(error.localizedDescription)")
+            return AIReport(
+                assessment: "There was an issue generating the report. Please check your connection and try again.",
+                suggestions: [],
+                topActivities: []
+            )
+        }
+    }
 }
 
-
-// These two helper classes are for the Recent Activities screen.
-// They can remain here or be moved to the ContentView file.
 struct AggregatedActivityRecord: Identifiable, Hashable {
     let id: String
     let name: String
@@ -600,6 +640,12 @@ enum ActivityFilter: Hashable, Identifiable {
         case .date(let date): return date.ISO8601Format()
         }
     }
+}
+
+struct AIReport {
+    let assessment: String
+    let suggestions: [Activity]
+    let topActivities: [Activity]
 }
 
 extension UIApplication {
