@@ -554,8 +554,8 @@ class AuthViewModel: ObservableObject {
     func generateAIReport() async -> AIReport? {
         guard let profile = selectedToddlerProfile else { return nil }
 
-        let ai = FirebaseAI.firebaseAI()
-        let model = ai.generativeModel(modelName: "gemini-1.5-flash")
+        let ai = FirebaseAI.firebaseAI(backend: .googleAI())
+        let model = ai.generativeModel(modelName: "gemini-2.5-flash")
 
         let parentName = self.currentUser?.displayName ?? "there"
 
